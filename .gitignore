@@ -1,0 +1,26 @@
+# Python ortamı ve önbellek
+.venv/
+__pycache__/
+*.pyc
+
+# Hesap kayıtları (bilgisayara özgü yollar içerir)
+hesap/*.txt
+*.log
+*.tmp
+
+# Veritabanları: README'deki adreslerden indirilir
+hesap/tdb/
+
+# Kişisel notlar ve araç ayarları
+FE-C_proje_devir.md
+.claude/
+.vscode/
+.idea/
+
+# İşletim sistemi
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Geçici test / görsel sayfaları
+web/_*.html

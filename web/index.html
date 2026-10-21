@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Faz Atlası · Fe–C</title>
+<meta name="description" content="Calculated (CALPHAD) Fe–Fe₃C phase diagram, alloy-steel isopleths for 63 grades and heat-treatment windows. Free, runs in the browser, Turkish & English. · Hesaplanmış Fe–Fe₃C faz diyagramı, 63 çeliğin alaşımlı kesitleri ve ısıl işlem sıcaklıkları.">
+<meta name="theme-color" content="#c2410c">
+<!-- bağlantı paylaşılınca görünen önizleme (LinkedIn, WhatsApp, Discord...) -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Faz Atlası — Fe–C phase diagram & heat treatment (TR / EN)">
+<meta property="og:description" content="Not a picture but a CALPHAD calculation: Fe–Fe₃C diagram, alloy-steel isopleths for 63 grades, heat-treatment windows. Free, runs in the browser. Türkçe / English.">
+<meta property="og:locale" content="tr_TR">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:url" content="https://acarcemal.github.io/faz-atlasi/">
+<meta property="og:image" content="https://acarcemal.github.io/faz-atlasi/onizleme.png">
+<meta property="og:image:alt" content="Faz Atlası: calculated isopleth of 42CrMo4 steel with heat-treatment windows">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23c2410c'/%3E%3Cpath d='M7 9l8 13 10-9M7 22h18' fill='none' stroke='white' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css?v=19">
+<script>
+  // kayıtlı tema seçimi sayfa çizilmeden uygulansın (beyaz parlama olmasın)
+  try { const t = localStorage.getItem('fec-tema'); if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+</head>
+<body>
+<div class="uygulama" data-t-aria="sayfa.baslik">
+  <header class="appbar">
+    <div class="marka">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="7"/>
+        <path d="M7 9l8 13 10-9M7 22h18"/>
+      </svg>
+      <div class="marka-ad"><b>Faz Atlası</b><span data-t="marka.alt">Fe–C · ısıl işlem</span></div>
+    </div>
+
+    <nav class="mod" data-t-aria="mod.etiket">
+      <button id="modFaz" class="aktif" aria-pressed="true" data-t="mod.faz">Faz diyagramı</button>
+      <button id="detayBtn" aria-pressed="false" data-t="mod.detay">Isıl işlem &amp; alaşım</button>
+    </nav>
+
+    <div class="appbar-sag">
+      <button class="ust-btn" data-bilgi="yontem" data-t-title="ust.yontem.ipucu">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6.2v.1"/></svg>
+        <span data-t="ust.yontem">Yöntem ve kaynaklar</span>
+      </button>
+      <button id="temaBtn" class="ust-btn" data-t-title="ust.tema.ipucu"></button>
+      <div class="dil-sec" role="group" data-t-aria="dil.ipucu" data-t-title="dil.ipucu">
+        <button data-dil="tr" lang="tr">TR</button><button data-dil="en" lang="en">EN</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="calisma">
+    <section class="diyagram-kart" data-t-aria="diyagram.kart.aria">
+      <div class="diyagram-ust">
+        <div class="nokta-alanlari">
+          <label class="alan" data-t-title="alan.C.ipucu">
+            <span class="alan-ad">C</span>
+            <input id="inC" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" data-adim="0.01" value="0.45" data-t-aria="alan.C.ipucu">
+            <span class="birim" data-t="alan.C.birim">% ağ.</span>
+            <input id="slC" type="range" min="0" max="6.69" step="0.001" value="0.45" data-t-aria="alan.C.kaydirici">
+          </label>
+          <label class="alan" data-t-title="alan.T.ipucu">
+            <span class="alan-ad">T</span>
+            <input id="inT" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" data-adim="1" value="780" data-t-aria="alan.T.ipucu">
+            <span class="birim">°C</span>
+            <input id="slT" type="range" min="400" max="1600" step="1" value="780" data-t-aria="alan.T.kaydirici">
+          </label>
+        </div>
+        <div class="gorunum" role="group" data-t-aria="gorunum.etiket">
+          <button data-v="tam" class="aktif" data-t="gorunum.tam">Tamamı</button>
+          <button data-v="celik" data-t="gorunum.celik">Çelik</button>
+          <button data-v="otektoid" data-t="gorunum.otektoid">Ötektoid</button>
+          <button data-v="ferrit" data-t="gorunum.ferrit">α-ferrit</button>
+          <button data-v="peritektik" data-t="gorunum.peritektik">Peritektik</button>
+          <span class="pin-yuva"></span>
+        </div>
+        <button class="bilgi-btn" data-bilgi="diyagram" data-t-title="diyagram.bilgi" data-t-aria="diyagram.bilgi">i</button>
+      </div>
+      <div class="katmanlar" id="katmanlar" hidden></div>
+      <div id="cizim">
+        <svg id="svg" role="application" tabindex="0" data-t-aria="diyagram.aria"></svg>
+        <div id="pinKart" class="pin-kart" hidden></div>
+        <div id="yukleme" class="yukleme" role="status" aria-live="polite"><span class="donen" aria-hidden="true"></span><span id="yuklemeYazi" data-t="yukleme.diyagram"></span></div>
+      </div>
+      <div class="diyagram-alt">
+        <div class="lejant" id="lejant"></div>
+        <div class="lejant bant-lejant" id="bantLejant" hidden></div>
+        <div class="ipucu" id="ipucu"></div>
+      </div>
+    </section>
+
+    <aside class="panel" id="panel" data-t-aria="panel.aria">
+      <div class="kart detay-kart" id="kAlas" hidden></div>
+      <div class="kart detay-kart" id="kIslem" hidden></div>
+      <div class="kart detay-kart" id="kSogu" hidden></div>
+      <div class="kart" id="kBolge"></div>
+      <div class="kart" id="kOran"></div>
+      <div class="kart" id="kKritik"></div>
+      <div class="kart" id="kYatay"></div>
+      <div class="kart" id="kYapi"></div>
+    </aside>
+  </main>
+</div>
+
+<div id="bildirim" class="bildirim" role="status" aria-live="polite" hidden></div>
+<noscript><div class="noscript">Faz Atlası bir web uygulamasıdır ve çalışmak için JavaScript gerektirir. Tarayıcında JavaScript'i açıp sayfayı yenile.<br><br>Faz Atlası is a web app and needs JavaScript. Please enable JavaScript in your browser and reload the page.</div></noscript>
+
+<dialog id="bilgiPencere" class="bilgi-pencere" aria-labelledby="bpBaslik">
+  <div class="bp-bas">
+    <h2 id="bpBaslik"></h2>
+    <button id="bpKapat" class="bp-kapat" data-t-aria="kapat" data-t-title="kapat">×</button>
+  </div>
+  <div class="bp-govde" id="bpGovde" tabindex="-1" autofocus></div>
+</dialog>
+
+<script src="dil.js?v=19"></script>
+<script>htmlDiliUygula(); document.title = t('sayfa.baslik');</script>
+<script src="veri/fe_c.js?v=3"></script>
+<script src="veri/celikler.js?v=18"></script>
+<script>
+  // hesaplanmış kesitlerin listesi hesap sürdükçe büyür: önbellekten değil, her açılışta taze yüklensin
+  document.write('<script src="veri/kesit/liste.js?t=' + Date.now() + '"><\/script>');
+</script>
+<script src="app.js?v=19"></script>
+<script src="kesit.js?v=19"></script>
+<script src="detay.js?v=19"></script>
+<script src="pin.js?v=19"></script>
+<script src="bilgi_en.js?v=19"></script>
+<script src="bilgi.js?v=19"></script>
+<script src="dil_sec.js?v=19"></script>
+</body>
+</html>
