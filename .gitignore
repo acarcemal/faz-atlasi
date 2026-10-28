@@ -13,6 +13,7 @@ hesap/tdb/
 
 # Kişisel notlar ve araç ayarları
 FE-C_proje_devir.md
+sunum/
 .claude/
 .vscode/
 .idea/
@@ -24,3 +25,6 @@ desktop.ini
 
 # Geçici test / görsel sayfaları
 web/_*.html
+
+# Sosyal medya paylaşım dosyaları (karusel PDF vb.)
+paylasim/

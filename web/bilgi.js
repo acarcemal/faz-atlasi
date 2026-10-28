@@ -128,7 +128,7 @@ soğumayı anlatır; hızlı soğumada difüzyon yetişmez ve denge dışı yap�
 <p>Martenzit difüzyonsuz, kayma ile oluşan bir dönüşümdür: karbon ferrit kafesinde hapsolur ve kafesi çarpıtır, sertlik buradan gelir.
 Dönüşüm <b>Ms</b>'de başlar ve sıcaklık düştükçe ilerler; <b>Mf</b>'de biter. Ms'i karbon ve alaşım elementleri düşürür. Burada Andrews'in
 formülü kullanılır:</p>
-<div class="formul">Ms (°C) = 539 − 423·C − 30,4·Mn − 17,7·Ni − 12,1·Cr − 7,5·Mo − 7,5·Si</div>
+<div class="formul">Ms (°C) = 539 − 423·C − 30,4·Mn − 17,7·Ni − 12,1·Cr − 7,5·Mo</div>
 <h4>Kalıntı östenit</h4>
 <p>Mf oda sıcaklığının altındaysa dönüşüm tamamlanamaz, bir kısım östenit dönüşmeden kalır. Oranı Koistinen–Marburger bağıntısıyla tahmin edilir:</p>
 <div class="formul">martenzit oranı = 1 − exp[−0,011·(Ms − T)]</div>

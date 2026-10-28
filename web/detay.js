@@ -77,7 +77,7 @@ function model(a = st.alas) {
 }
 
 function msHesap(C, a = st.alas) {
-  return 539 - 423 * C - 30.4 * a.Mn - 17.7 * a.Ni - 12.1 * a.Cr - 7.5 * a.Mo - 7.5 * a.Si;
+  return 539 - 423 * C - 30.4 * a.Mn - 17.7 * a.Ni - 12.1 * a.Cr - 7.5 * a.Mo;
 }
 function martenzitHRC(C) {
   if (C > 0.6) return null;

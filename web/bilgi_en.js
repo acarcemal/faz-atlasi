@@ -130,7 +130,7 @@ steel's data sheet always takes precedence.</p>`,
 <p>Martensite forms by a diffusionless shear transformation: carbon is trapped in the iron lattice and distorts it, which is where the
 hardness comes from. The transformation starts at <b>Ms</b>, proceeds as the temperature falls and finishes at <b>Mf</b>. Carbon and the
 alloying elements lower Ms; here Andrews' equation is used:</p>
-<div class="formul">Ms (°C) = 539 − 423·C − 30.4·Mn − 17.7·Ni − 12.1·Cr − 7.5·Mo − 7.5·Si</div>
+<div class="formul">Ms (°C) = 539 − 423·C − 30.4·Mn − 17.7·Ni − 12.1·Cr − 7.5·Mo</div>
 <h4>Retained austenite</h4>
 <p>If Mf lies below room temperature the transformation cannot finish and some austenite remains untransformed. Its amount is estimated
 with the Koistinen–Marburger relation:</p>
