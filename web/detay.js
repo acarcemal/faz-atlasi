@@ -57,6 +57,17 @@ function egri(noktalar) {
 const A3_HESAP = egri(POLY.find((P) => key(P.p) === 'A+G').sag);
 const ACM_HESAP = egri(POLY.find((P) => key(P.p) === 'G+C').sol);
 const A1_H = INV.otektoid.T, WE_H = INV.otektoid.G, T0_H = INV.Fe_alfa_gama.T, GMAX_H = INV.otektik.G;
+// katılaşma başlangıcı (solidus): ikili hesapta sıvının ilk göründüğü sıcaklık, 0,01 % C adımla
+const SOLIDUS_H = egri(Array.from({ length: Math.round(GMAX_H * 100) + 1 }, (_, i) => {
+  const C = i / 100;
+  for (const r of D.rows) {
+    const b = r.r.find((q) => C >= q.x[0] && C <= q.x[1]);
+    if (b && b.p.includes('L')) return [C, r.T];
+  }
+  return [C, D.meta.T_max];
+}));
+const SOLIDUS_PAYI = 100;   // ısıl işlem üst sınırı katılaşma başlangıcının en az bu kadar altında (aşırı ısınma / yanma)
+const GERILIM_PAYI = 20;    // gerilim giderme üst sınırı A1'in en az bu kadar altında
 
 /* ---------- alaşımlı model ---------- */
 function model(a = st.alas) {
@@ -110,15 +121,26 @@ function kritik(C, m = model()) {
 /** Bir karbon değeri için ısıl işlem sıcaklık aralıkları (hesaplanamayan için null).
     Sertleştirme/tavlama: ferritin bittiği çizginin (A3 / A1 bandı üstü) +30–50 °C üstü.
     Normalizasyon: tam östenit çizgisinin (ferrit ve karbürlerin ikisinin de bittiği yer; ikilide hipoda A3, hiperde Acm)
-    +50–70 °C üstü. İki çizgi de karbon boyunca kesintisiz olduğu için bantlar ötektoid civarında kırılmaz. */
+    +50–70 °C üstü. İki çizgi de karbon boyunca kesintisiz olduğu için bantlar ötektoid civarında kırılmaz.
+    Sınır dışı durumlar: dökme demirde (C > γ'nın en yüksek karbonu) çelik pencereleri yok; normalizasyon
+    katılaşma başlangıcına SOLIDUS_PAYI'ndan fazla yaklaşırsa yok; gerilim giderme A1 − GERILIM_PAYI ile sınırlı. */
+const dokmeMi = (C, m = model()) => !KAYNAK.alt && C > m.gmax;
+function gerilimAraligi(k) {
+  if (k.ae1Alt) return null;   // denge A1'i hesap aralığının (550 °C) altında: güvenli pencere verilemez
+  const ust = Math.min(650, k.ae1 != null ? k.ae1 - GERILIM_PAYI : 650);
+  return ust >= 570 ? [550, ust] : null;
+}
 function islemAraliklari(C, m = model()) {
   const k = kritik(C, m);
   const ekle = (T, a, b) => (T == null ? null : [T + a, T + b]);
+  // gerilim giderme dökme demirde de uygulanır
+  if (dokmeMi(C, m)) return { tavlama: null, normal: null, kuresel: null, gerilim: gerilimAraligi(k) };
+  const normal = ekle(k.tam, 50, 70);
   return {
     tavlama: ekle(k.ae3, 30, 50),
-    normal: ekle(k.tam, 50, 70),
+    normal: normal && normal[1] <= SOLIDUS_H(C) - SOLIDUS_PAYI ? normal : null,
     kuresel: ekle(k.ae1, -30, 0),
-    gerilim: [550, 650],
+    gerilim: gerilimAraligi(k),
   };
 }
 
@@ -455,11 +477,11 @@ KANCA.panel.push(() => {
   const hipo = k.hipo;
 
   // geçerlilik uyarıları
+  const dokme = dokmeMi(w, m);
   const uyarilar = [];
   if (!gercek) {
-    if (w > 0.6) uyarilar.push(t('uyari.andrewsC', { C: fmtC(w), sinir: fmtC(0.6) }));
+    if (w > 0.6 && !dokme) uyarilar.push(t('uyari.andrewsC', { C: fmtC(w), sinir: fmtC(0.6) }));
     for (const e of ELEMENTLER) if (a[e.s] > e.max) uyarilar.push(t('uyari.element', { e: e.s, deger: yuzde(fmt(a[e.s], 2)), sinir: yuzde(fmt(e.max, 1)) }));
-    if (w > m.gmax) uyarilar.push(t('uyari.dokme'));
   } else if (w > 0.6) {
     uyarilar.push(t('uyari.msEmpirik', { sinir: fmtC(0.6) }));
   }
@@ -468,6 +490,12 @@ KANCA.panel.push(() => {
   // ısıl işlem kartı
   const r = islemAraliklari(w, m);
   const sinifAd = t(hipo ? 'hipo.k' : 'hiper.k');
+  // pencerelerin neden verilmediğini / daraltıldığını açıkla
+  const notlar = [];
+  if (dokme) notlar.push(`<div class="uyari">${t('not.dokme', { C: fmtC(m.gmax) })}</div>`);
+  else if (k.tam != null && !r.normal) notlar.push(`<div class="kucuk" style="margin-top:8px">${t('not.normalSolidus', { T: fmt(SOLIDUS_H(w), 0), pay: SOLIDUS_PAYI })}</div>`);
+  if (k.ae1Alt) notlar.push(`<div class="kucuk" style="margin-top:8px">${t('not.gerilimYok')}</div>`);
+  else if (r.gerilim && r.gerilim[1] < 650) notlar.push(`<div class="kucuk" style="margin-top:8px">${t('not.gerilimA1', { A1: fmt(k.ae1, 0), pay: GERILIM_PAYI })}</div>`);
   const kare = (ad, deger, alt) => `<div class="kare"><b>${ad}</b><span>${deger}</span>${alt ? `<div class="kucuk soluk">${alt}</div>` : ''}</div>`;
   const aralik = (t) => (t ? `${fmt(t[0], 0)}–${fmt(t[1], 0)} °C` : '—');
   const T0 = (T) => (T == null ? '—' : fmt(T, 0) + ' °C');
@@ -488,17 +516,23 @@ KANCA.panel.push(() => {
     <div class="kucuk soluk">${t('not.empirikKarsilastirma', { A1: fmt(m.A1, 0), ikinci: m.we > w ? `A3′ ${fmt(m.A3(w), 0)}` : `Acm′ ${fmt(m.Acm(w), 0)}` })}</div>`
     : `<div class="kritik-ust">
       ${kare('A1' + (m.alasimli ? '′' : ''), fmt(m.A1, 0) + ' °C')}
-      ${kare(hipo ? 'A3' + (m.alasimli ? '′' : '') : 'Acm' + (m.alasimli ? '′' : ''), fmt(hipo ? m.A3(w) : m.Acm(w), 0) + ' °C')}
-      ${kare(t('kare.otektoidC'), fmtC(m.we), sinifAd)}
+      ${dokme ? kare(t('kare.sinif'), t('kare.dokme'))
+        : kare(hipo ? 'A3' + (m.alasimli ? '′' : '') : 'Acm' + (m.alasimli ? '′' : ''), fmt(hipo ? m.A3(w) : m.Acm(w), 0) + ' °C')}
+      ${kare(t('kare.otektoidC'), fmtC(m.we), dokme ? t('dokme.k') : sinifAd)}
     </div>`}
     <table class="liste">${BANTLAR.map(satir).join('')}</table>
-    ${hipo ? '' : `<div class="kucuk" style="margin-top:8px">${t('not.hiperSertlestirme')}</div>`}
+    ${notlar.join('')}
+    ${hipo || dokme ? '' : `<div class="kucuk" style="margin-top:8px">${t('not.hiperSertlestirme')}</div>`}
     ${m.alasimli && !gercek ? `<div class="kucuk" style="margin-top:8px">${t('not.ureticiEmpirik')}</div>` : ''}
     ${gercek ? `<div class="kucuk" style="margin-top:8px">${t('not.ureticiHesap')}</div>` : ''}
     ${m.alasimli && !gercek ? `<div class="kucuk soluk" style="margin-top:6px">${t('not.alasimKaymasi', { dA1: fmt(m.dA1, 0), dA3: fmt(m.dA3, 0), we0: fmtC(WE_H), we: fmtC(m.we) })}</div>` : ''}
     ${uyari}`;
 
-  // soğuma kartı
+  // soğuma kartı: Ms, sertlik ve sertleşebilirlik bağıntıları çelikler için; dökme demirde verilmez
+  if (dokme) {
+    $('kSogu').innerHTML = `${baslik(t('kart.sogu'), ORTAMLAR[st.ortam])}<div class="kucuk" style="margin-top:4px">${t('sogu.dokme')}</div>`;
+    return;
+  }
   const Ms = msHesap(w), Mf = Ms - 215;
   const fM = Ms > 20 ? 1 - Math.exp(-0.011 * (Ms - 20)) : 0;
   const hrc = martenzitHRC(w);

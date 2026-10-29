@@ -189,7 +189,7 @@ sozlukEkle({
   'bant.kuresel': ['Küreselleştirme', 'Spheroidizing'],
   'bant.kuresel.a': ['A1 − 30 °C … A1 (uzun bekleme)', 'A1 − 30 °C … A1 (long hold)'],
   'bant.gerilim': ['Gerilim giderme', 'Stress relieving'],
-  'bant.gerilim.a': ['550–650 °C (A1 altı, faz dönüşümü yok)', '550–650 °C (below A1, no phase change)'],
+  'bant.gerilim.a': ['550–650 °C (A1\'in en az 20 °C altı, faz dönüşümü yok)', '550–650 °C (at least 20 °C below A1, no phase change)'],
   'bantlar.lejant': ['Bantlar ({C} C için)', 'Windows (for {C} C)'],
 
   'ortam.firin': ['Fırında (tavlama)', 'Furnace cool (annealing)'],
@@ -236,7 +236,16 @@ sozlukEkle({
 
   'uyari.andrewsC': ['C = {C}: Andrews formülleri C ≤ {sinir} için türetildi.', 'C = {C}: the Andrews equations were derived for C ≤ {sinir}.'],
   'uyari.element': ['{e} = {deger}: yaklaşık geçerlilik sınırı {sinir}.', '{e} = {deger}: approximate validity limit is {sinir}.'],
-  'uyari.dokme': ['Bu karbon çelik aralığının dışında (dökme demir); ısıl işlem bantları çeliğe göredir.', 'This carbon content is outside the steel range (cast iron); the heat-treatment windows apply to steels.'],
+  'not.dokme': ['Bu bileşim dökme demir aralığında (C > {C}); çelik ısıl işlem pencereleri (tavlama, sertleştirme, normalizasyon, küreselleştirme) uygulanmaz. Gerilim giderme dökme demirde de yapılır.',
+    'This composition is in the cast-iron range (C > {C}); steel heat-treatment windows (annealing, hardening, normalizing, spheroidizing) do not apply. Stress relieving is also used for cast irons.'],
+  'kare.dokme': ['Dökme demir', 'Cast iron'],
+  'dokme.k': ['çelik aralığı dışında', 'outside the steel range'],
+  'not.normalSolidus': ['Normalizasyon penceresi verilmedi: tam östenit + 50–70 °C, katılaşma başlangıcına ({T} °C) {pay} °C\'den fazla yaklaşıyor (aşırı ısınma ve tane sınırı ergimesi riski).',
+    'No normalizing window: full austenite + 50–70 °C comes within {pay} °C of the solidus ({T} °C), risking overheating and grain-boundary melting.'],
+  'not.gerilimA1': ['A1 ({A1} °C) düşük olduğu için gerilim giderme üst sınırı A1 − {pay} °C\'ye çekildi; daha yükseği kısmi östenitleşme demektir.',
+    'Because A1 is low ({A1} °C), the stress-relieving upper limit is capped at A1 − {pay} °C; going higher would partly re-austenitize the steel.'],
+  'not.gerilimYok': ['Denge A1\'i 550 °C\'nin altında olduğu için gerilim giderme penceresi verilmedi; sıcaklığı çeliğin veri sayfasından alın (genelde son temperleme sıcaklığının altında).',
+    'No stress-relieving window: the equilibrium A1 is below 550 °C. Take the temperature from the steel\'s data sheet (usually below the final tempering temperature).'],
   'uyari.msEmpirik': ['Ms ve martenzit sertliği hâlâ empirik (C ≤ {sinir} için türetildi).', 'Ms and martensite hardness are still empirical (derived for C ≤ {sinir}).'],
 
   'kart.islem': ['Isıl işlem sıcaklıkları', 'Heat treatment'],
@@ -276,6 +285,8 @@ sozlukEkle({
   'sogu.DI': ['İdeal kritik çap D<sub>I</sub> (ASTM A255, tane 7)', 'Ideal critical diameter D<sub>I</sub> (ASTM A255, grain size 7)'],
   'sogu.not': ['Yapı tahmini ~25 mm kesit, {cizgi} üstünden östenitlenmiş parça için kaba bir yönlendirmedir; gerçek sonuç kesite ve CCT diyagramına bağlıdır.',
     'The predicted structure is a rough guide for a ~25 mm section austenitized above {cizgi}; the actual result depends on section size and the steel\'s CCT diagram.'],
+  'sogu.dokme': ['Ms, martenzit sertliği ve sertleşebilirlik bağıntıları çelikler için türetildi; dökme demirde verilmez. Dökme demirin yapısı (gri, beyaz, küresel grafitli) bileşime, aşılamaya ve döküm soğuma hızına bağlıdır.',
+    'The Ms, martensite hardness and hardenability relations were derived for steels and are not given for cast irons. A cast iron\'s structure (grey, white, ductile) depends on composition, inoculation and the cooling rate in the mould.'],
 
   'sy.kalinti': ['Kalıntı östenit yüksek ({oran}); sıfıraltı işlem düşünülebilir.', 'Retained austenite is high ({oran}); consider a sub-zero treatment.'],
   'sy.catlak': ['Çatlama/çarpılma riski yüksek; hemen temperleme şart.', 'High risk of cracking and distortion; temper immediately.'],
