@@ -154,3 +154,5 @@ ve çelik dışı elementleri ayıklar.
   (`mc_fe_pycalphad.tdb`) paylaşılırsa ODbL gereği aynı lisansla ve bu atıfla paylaşılmalıdır.
 - Çelik bileşim aralıkları ilgili EN/ISO standartlarındaki döküm analizi aralıklarıdır.
 
+
+Faz Atlası kodu [MIT lisansı](LICENSE) ile yayımlanmıştır; kesit verilerine ait veri notu [NOTICE](NOTICE) dosyasındadır.

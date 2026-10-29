@@ -153,3 +153,5 @@ The code and file names are in Turkish; the comments in each file explain what i
   from this database. If the adapted database file (`mc_fe_pycalphad.tdb`) is shared, it must be shared under the same license with this
   attribution.
 - Steel composition ranges are the heat-analysis ranges from the relevant EN/ISO standards.
+
+Faz Atlası code is released under the [MIT License](LICENSE); the data notice for the isopleths is in [NOTICE](NOTICE).

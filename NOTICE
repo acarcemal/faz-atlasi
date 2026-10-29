@@ -1,0 +1,9 @@
+Faz Atlası
+Copyright (c) 2026 acarcemal
+
+The source code in this repository is licensed under the MIT License (see LICENSE).
+
+Data notice: the alloy steel isopleths in web/veri/kesit/ are produced from the
+MatCalc mc_fe v2.062 thermodynamic database (E. Povoden-Karadeniz, A. Jacob,
+TU Wien), which is made available under the Open Database License (ODbL 1.0):
+https://opendatacommons.org/licenses/odbl/1-0/
