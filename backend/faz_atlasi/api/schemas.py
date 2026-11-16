@@ -1,4 +1,8 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
+
+from ..db.models import SINIFLAR
 
 
 class DesignationOut(BaseModel):
@@ -59,6 +63,12 @@ class PointRequest(BaseModel):
     composition: dict[str, float] = Field(..., examples=[{'C': 0.42, 'Mn': 0.75, 'Si': 0.25, 'Cr': 1.05, 'Mo': 0.22}],
                                           description='Ağırlıkça %; Fe kalan')
     T: float = Field(..., ge=300, le=1600, description='Sıcaklık, °C', examples=[760])
+
+
+class HeatTreatmentRequest(BaseModel):
+    composition: dict[str, float] = Field(..., examples=[{'C': 0.04, 'Si': 0.4, 'Mn': 1.2, 'Cr': 18.5, 'Ni': 9.25}],
+                                          description='Ağırlıkça %; Fe kalan')
+    steel_class: Literal[SINIFLAR] | None = Field(None, description='Verilmezse bileşimden kestirilir')
 
 
 class PointResponse(BaseModel):

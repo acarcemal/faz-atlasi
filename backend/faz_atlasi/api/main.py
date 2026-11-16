@@ -16,9 +16,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func, select
 from sqlalchemy.orm import sessionmaker
 
+from ..calc import isil_islem
 from ..calc.engine import get_engine
 from ..calc.point import GecersizBilesim, PointService
 from ..db import AlloyFamily, CalculationCache, Steel, make_engine
+from ..library import classify
 from ..library.search import search
 from . import schemas
 
@@ -124,6 +126,34 @@ def isopleth(family_id: str, s=Depends(oturum)):
     if f.isopleth_boundaries is None:
         raise HTTPException(404, 'Bu ailenin kesiti henüz hesaplanmadı (backend/trace_families.py)')
     return f.isopleth_boundaries
+
+
+def _rejim(sinif, nom):
+    anahtar = (sinif, tuple(sorted(nom.items())))
+    onbellek = durum.setdefault('rejim', {})
+    if anahtar not in onbellek:
+        onbellek[anahtar] = isil_islem.rejim(sinif, nom, durum['point'])
+    return onbellek[anahtar]
+
+
+@app.get('/api/v1/steels/{steel_id}/heat-treatment')
+def steel_heat_treatment(steel_id: int, s=Depends(oturum)):
+    """Çelik sınıfına göre rejim: dönüşüm (Ae1/Ae3/Ms) ya da çözeltiye alma (hassaslaşma, sigma, Md30)."""
+    c = s.get(Steel, steel_id)
+    if not c:
+        raise HTTPException(404, 'Çelik bulunamadı')
+    return {'steel_id': c.id, 'standard_name': c.standard_name, **_rejim(c.steel_class, c.nominal())}
+
+
+@app.post('/api/v1/heat-treatment')
+def heat_treatment(req: schemas.HeatTreatmentRequest):
+    """Kullanıcı bileşimi için rejim; sınıf verilmezse bileşimden kestirilir."""
+    nom = {e.strip().capitalize(): v for e, v in req.composition.items() if v > 0}
+    sinif = req.steel_class or classify.heuristic(nom)
+    try:
+        return {'steel_class_source': 'request' if req.steel_class else 'heuristic', **_rejim(sinif, nom)}
+    except GecersizBilesim as e:
+        raise HTTPException(422, str(e))
 
 
 @app.post('/api/v1/equilibrium/point', response_model=schemas.PointResponse)

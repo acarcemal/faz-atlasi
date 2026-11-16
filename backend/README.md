@@ -24,7 +24,22 @@ TDB (`hesap/tdb/mc_fe_pycalphad.tdb`) depoda yok; ana README'deki adresten indir
 | `GET /api/v1/steels/{id}` | Normlar, bileşim aralıkları, sınıf, aile, kaynaklar |
 | `GET /api/v1/families/{id}` | Aile bileşimi, üye sayısı, kesit durumu |
 | `GET /api/v1/isopleth/{family_id}` | Kesit: satır bölgeleri (`rows`) ve sınır çizgileri (`lines`) |
+| `GET /api/v1/steels/{id}/heat-treatment` | Sınıfa göre ısıl işlem rejimi (aşağıda) |
+| `POST /api/v1/heat-treatment` | `{"composition": {...}, "steel_class": null}` → kullanıcı bileşimi için aynı rejim; sınıf verilmezse kestirilir |
 | `POST /api/v1/equilibrium/point` | `{"composition": {"C": 0.42, "Cr": 1.05, ...}, "T": 760}` → faz oranları, fazlardaki karbon, faz bileşimleri |
+
+## Isıl işlem rejimi (`faz_atlasi/calc/isil_islem.py`)
+
+| Mod | Sınıf | Döndürülen |
+|---|---|---|
+| `transformation` | karbon/düşük alaşımlı, martenzitik paslanmaz | Ae1, Ae3, karbür çözünme, δ-ferrit başlangıcı (CALPHAD); sertleştirme Ae3 + 30–50 °C; Ms (Andrews) |
+| `solution_annealing` | östenitik paslanmaz | A1/A3 gizlenir (`hide`); çözeltiye alma 1050–1100 °C; hassaslaşma 500–800 °C ve risk (C ≤ %0,03 ya da Ti ≥ 5C / Nb ≥ 10C → düşük); M23C6 ve σ çözünme (CALPHAD); Ms (Eichelman–Hull), Md30 (Angel) |
+| `duplex` | dupleks | çözeltiye alma 1020–1100 °C, σ çözünme, 475 °C gevrekleşmesi |
+| `ferritic` | ferritik paslanmaz | tavlama 750–850 °C, 475 °C gevrekleşmesi, σ |
+| `no_transformation` | Hadfield, Fe-Ni, yarı östenitik | sadece CALPHAD sıcaklıkları |
+
+CALPHAD sıcaklıkları denge değerleridir (Ac/Ar değil): 450–1350 °C arası 50 °C tarama + ±2 °C'ye ikiye bölme.
+Bir çelik ilk sorulduğunda 1–16 s (yeni alaşım sistemi derleniyorsa uzun), sonra önbellekten.
 
 ## Ölçümler (2026-11-02, 12 çekirdekli dizüstü; aynı anda başka bir hesap 4 çekirdek kullanıyordu)
 
