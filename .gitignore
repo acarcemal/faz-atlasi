@@ -28,3 +28,6 @@ web/_*.html
 
 # Sosyal medya paylaşım dosyaları (karusel PDF vb.)
 paylasim/
+
+# Faz 2.0 yerel veritabanı (backend/build_db.py ile kaynaklardan üretilir)
+backend/data/*.db

@@ -1,0 +1,5 @@
+sqlalchemy>=2.0
+pandas>=2.2
+openpyxl>=3.1
+pytest>=8
+# PostgreSQL için (SQLite'ta gerekmez): psycopg[binary]>=3.2

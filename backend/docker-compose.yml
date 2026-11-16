@@ -1,0 +1,32 @@
+# docker compose -f backend/docker-compose.yml up --build      (depo kökünden)
+# İlk kurulumda veritabanını doldurmak için:
+#   docker compose -f backend/docker-compose.yml run --rm api python backend/build_db.py
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: faz
+      POSTGRES_USER: faz
+      POSTGRES_PASSWORD: ${FAZ_DB_PASSWORD:-faz_yerel}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U faz -d faz"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    environment:
+      FAZ_DB_URL: postgresql+psycopg://faz:${FAZ_DB_PASSWORD:-faz_yerel}@db:5432/faz
+      FAZ_CORS: ${FAZ_CORS:-*}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

@@ -1,0 +1,23 @@
+anchor_system,anchor_code,system,code,approx,note
+# Bir çeliğe (anchor) ek norm adı bağlar. approx=0: aynı çelik (başka kayıtta varsa birleştirilir); approx=1: yakın karşılık (sadece aranır).
+# Satın alınan norm listelerinden gelen eşleştirmeler bu biçimde ayrı bir dosyaya yazılıp build_db.py --esdeger ile verilebilir.
+EN,42CrMo4,JIS,SCM440,1,
+EN,34CrMo4,JIS,SCM435,1,
+EN,25CrMo4,JIS,SCM430,1,
+EN,41Cr4,JIS,SCr440,1,
+EN,100Cr6,JIS,SUJ2,1,
+EN,C10E,JIS,S10C,1,
+EN,C15E,JIS,S15C,1,
+EN,C22E,JIS,S20C,1,
+EN,C35E,JIS,S35C,1,
+EN,C45E,JIS,S45C,1,
+EN,C55E,JIS,S55C,1,
+EN,51CrV4,JIS,SUP10,1,
+EN,100MnCrW4,JIS,SKS3,1,
+EN,20NiCrMo2-2,JIS,SNCM220,1,
+EN,42CrMo4,UNS,G41400,0,
+EN,25CrMo4,UNS,G41300,0,
+EN,C45E,UNS,G10450,0,
+EN,100Cr6,UNS,G52986,0,
+AISI,4340,UNS,G43400,0,
+AISI,9310,UNS,G93106,0,
