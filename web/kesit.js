@@ -14,9 +14,11 @@ window.KESIT_YUKLE = (anahtar, veri) => {
   KESITLER[anahtar] = veri;
   if (kesitBekleyen[anahtar]) { kesitBekleyen[anahtar].forEach((f) => f()); delete kesitBekleyen[anahtar]; }
 };
-const kesitVar = (anahtar) => (window.KESIT_LISTE || []).includes(anahtar);
+// 'api:<aile>' anahtarları sunucudaki aile kesitleridir (api.js); varlığı arama sonucunda bildirilir
+const kesitVar = (anahtar) => anahtar.startsWith('api:') || (window.KESIT_LISTE || []).includes(anahtar);
 function kesitYukle(anahtar) {
   if (KESITLER[anahtar]) return Promise.resolve(KESITLER[anahtar]);
+  if (anahtar.startsWith('api:')) return apiKesitYukle(anahtar.slice(4)).then((v) => (KESITLER[anahtar] = v));
   return new Promise((ok, hata) => {
     const ilk = !kesitBekleyen[anahtar];
     (kesitBekleyen[anahtar] = kesitBekleyen[anahtar] || []).push(() => ok(KESITLER[anahtar]));
@@ -34,6 +36,10 @@ Object.assign(FAZ, {
   K6:  { ad: t('faz.K6'), kisa: 'M₆C' },
   MC:  { ad: t('faz.MC'), kisa: 'MC' },
   M2C: { ad: t('faz.M2C'), kisa: 'M₂C' },
+  // paslanmazlarda (sunucu kesitleri) intermetalik fazlar
+  SG:  { ad: t('faz.SG'), kisa: 'σ' },
+  CHI: { ad: t('faz.CHI'), kisa: 'χ' },
+  LAV: { ad: t('faz.LAV'), kisa: 'Laves' },
 });
 const KARBURLER = ['C', 'K7', 'K23', 'K6', 'MC', 'M2C'];
 const ELEMENT_AD = { Mn: 'Mn', Si: 'Si', Cr: 'Cr', Ni: 'Ni', Mo: 'Mo', V: 'V', W: 'W', Cu: 'Cu' };
@@ -61,8 +67,19 @@ function kesitKaynak(anahtar, etiket) {
     return a.r.map((r, k) => ({ p: r.p, x: [r.x[0] + t * (b.r[k].x[0] - r.x[0]), r.x[1] + t * (b.r[k].x[1] - r.x[1])] }));
   }
 
+  /** Sunucu kesitinde ızgara yok: oranlar o nokta için anlık CALPHAD hesabından (api.js). Sonuç gelene kadar
+      bölgenin fazları oransız döner (oran: null), gelince panel yeniden çizilir. */
+  function oranlarApi(w, T) {
+    const r = bolgeBul(bolgelerK(T), w);
+    const s = apiNokta(K.bilesim, w, T);
+    if (!s || s.hata) return { r, fazlar: r.p.map((f) => ({ f, oran: null, w: null })), bekliyor: !s, hata: !!s };
+    const fazlar = Object.entries(s.phases).filter(([f]) => FAZ[f]).map(([f, o]) => ({ f, oran: o, w: s.carbon_in_phases[f] }));
+    return { r, fazlar, ms: s.elapsed_ms, onbellek: s.cached };
+  }
+
   /** Izgaradan ikili doğrusal ara değer; sadece o noktadaki bölgenin fazları, yeniden normalize */
   function oranlar(w, T) {
+    if (K.api) return oranlarApi(w, T);
     const r = bolgeBul(bolgelerK(T), w);
     const i = indeks(T), a = rows[i], b = rows[Math.min(i + 1, rows.length - 1)];
     const t = b.T === a.T ? 0 : Math.min(Math.max((T - a.T) / (b.T - a.T), 0), 1);
@@ -180,9 +197,10 @@ function kesitKaynak(anahtar, etiket) {
   /* ---- panel ---- */
   function panel() {
     const { C: w, T } = st;
-    const { r, fazlar } = oranlar(w, T);
+    const { r, fazlar, bekliyor, hata, ms, onbellek } = oranlar(w, T);
     const regs = bolgelerK(T);
-    const alas = Object.entries(K.bilesim).filter(([e]) => e !== 'C').map(([e, v]) => `${ELEMENT_AD[e] || e} ${yuzde(fmt(v, 2))}`).join(' · ');
+    const alas = Object.entries(K.bilesim).filter(([e]) => e !== 'C').map(([e, v]) => `${ELEMENT_AD[e] || e} ${yuzde(fmt(v, 2))}`).join(' · ')
+      + (K.ignored && K.ignored.length ? ` (${t('api.hesapDisi', { el: K.ignored.join(', ') })})` : '');
     const n = r.p.length;
     $('kBolge').innerHTML = `
       ${baslik(t('kart.nokta'), `${fmtC(w)} C · ${fmtT(T)}`)}
@@ -190,12 +208,16 @@ function kesitKaynak(anahtar, etiket) {
       <div class="kucuk soluk" style="margin-top:4px">${t('bolge.' + Math.min(n, 4))} · ${t('kesit.bolgeAciklama', { ad: esc(ad), alas })}</div>
       <div style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap">${r.p.map(chip).join('')}</div>`;
 
-    const cubuk = fazlar.map((f) => `<div style="width:${f.oran * 100}%;background:var(--ph-${f.f})"></div>`).join('');
+    const cubuk = fazlar.map((f) => `<div style="width:${(f.oran ?? 1 / fazlar.length) * 100}%;background:var(--ph-${f.f})"${f.oran == null ? ' class="bekliyor"' : ''}></div>`).join('');
     const satirlar = fazlar.map((f) => `
       <div class="faz-satir"><span class="ad">${FAZ[f.f].ad}</span><span class="oran">${fmtP(f.oran)}</span>
       <span class="bilesim">${t('faz.karbon')}: <b>${f.w != null ? fmtC(f.w) : '—'}</b> C</span></div>`).join('');
+    const oranNot = !K.api ? t('kesit.oranNot', { izgara: `5 °C × ${fmtC(0.03)} C` })
+      : hata ? t('api.nokta.hata')
+        : bekliyor ? t('api.nokta.bekliyor')
+          : t('api.nokta.not', { sure: onbellek ? t('api.onbellek') : fmt(ms, 0) + ' ms' });
     $('kOran').innerHTML = `${baslik(t('kart.oran'), t('kart.oran.meta.hesap'))}<div class="cubuk">${cubuk}</div>${satirlar}
-      <div class="kucuk soluk" style="margin-top:6px">${t('kesit.oranNot', { izgara: `5 °C × ${fmtC(0.03)} C` })}</div>`;
+      <div class="kucuk soluk" style="margin-top:6px">${oranNot}</div>`;
 
     const gs = gecislerK(w);
     const k = kritik(w);

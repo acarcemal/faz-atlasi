@@ -20,6 +20,7 @@ class SteelSummary(BaseModel):
     group_en: str
     steel_class: str
     alloy_family_id: str | None
+    isopleth_available: bool = False
 
 
 class SteelList(BaseModel):

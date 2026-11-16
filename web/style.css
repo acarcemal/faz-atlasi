@@ -19,6 +19,9 @@
   --ph-K6: #c9c3e6;
   --ph-MC: #7fcdbf;
   --ph-M2C: #d9c17a;
+  --ph-SG: #f0b46c;
+  --ph-CHI: #b9a3d9;
+  --ph-LAV: #9cc3e0;
   --bolge-opak: 0.62;
   --bant-tavlama: #0e7490;
   --bant-normal: #be185d;
@@ -53,6 +56,12 @@
     --ph-K6: #6d66a0;
     --ph-MC: #36897c;
     --ph-M2C: #8f7a33;
+  --ph-SG: #a8631c;
+  --ph-CHI: #6f5a94;
+  --ph-LAV: #3f7396;
+    --ph-SG: #a8631c;
+    --ph-CHI: #6f5a94;
+    --ph-LAV: #3f7396;
     --bolge-opak: 0.7;
     /* koyu zeminde bantlar parlak tonlarla, odak modunda fazlar biraz daha görünür */
     --bant-tavlama: #38bdf8;
@@ -497,6 +506,13 @@ small.alfa { background: var(--ph-A); color: var(--metin); }
   border: 2.5px solid var(--cizgi); border-top-color: var(--vurgu); animation: don .8s linear infinite;
 }
 @keyframes don { to { transform: rotate(360deg); } }
+.kucuk-donen { display: inline-block; width: 12px; height: 12px; border-width: 2px; vertical-align: -2px; }
+/* sunucudan oran beklenirken çubuk soluk */
+.cubuk div.bekliyor { opacity: .35; }
+/* hassaslaşma riski rozeti */
+.risk { font-size: 10.5px; font-weight: 700; padding: 0 6px; border-radius: 4px; vertical-align: 1px; color: #fff; }
+.risk-high { background: var(--vurgu); }
+.risk-low { background: var(--bant-kuresel); }
 
 /* Panel kartları dolana kadar yer tutucu (boş ekran yerine) */
 .kart:empty:not([hidden]) {

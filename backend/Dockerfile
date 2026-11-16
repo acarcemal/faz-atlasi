@@ -13,6 +13,7 @@ COPY hesap/tdb/mc_fe_pycalphad.tdb /app/tdb/
 COPY hesap/celik_kutuphanesi.py /app/hesap/
 COPY hesap/veri_kaynaklari /app/hesap/veri_kaynaklari
 COPY backend /app/backend
+COPY web /app/web
 
 RUN useradd --create-home faz && chown -R faz /app
 USER faz

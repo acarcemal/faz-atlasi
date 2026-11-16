@@ -125,12 +125,15 @@ function kritik(C, m = model()) {
     Sınır dışı durumlar: dökme demirde (C > γ'nın en yüksek karbonu) çelik pencereleri yok; normalizasyon
     katılaşma başlangıcına SOLIDUS_PAYI'ndan fazla yaklaşırsa yok; gerilim giderme A1 − GERILIM_PAYI ile sınırlı. */
 const dokmeMi = (C, m = model()) => !KAYNAK.alt && C > m.gmax;
+const ISLEM_YOK = { tavlama: null, normal: null, kuresel: null, gerilim: null };
 function gerilimAraligi(k) {
   if (k.ae1Alt) return null;   // denge A1'i hesap aralığının (550 °C) altında: güvenli pencere verilemez
   const ust = Math.min(650, k.ae1 != null ? k.ae1 - GERILIM_PAYI : 650);
   return ust >= 570 ? [550, ust] : null;
 }
 function islemAraliklari(C, m = model()) {
+  // östenitik/dupleks/ferritik paslanmazda A1/A3'e bağlı pencereler yok (rejim kartları gösterilir)
+  if (donusumsuzRejim()) return ISLEM_YOK;
   const k = kritik(C, m);
   const ekle = (T, a, b) => (T == null ? null : [T + a, T + b]);
   // gerilim giderme dökme demirde de uygulanır
@@ -175,7 +178,7 @@ KANCA.ciz.push(() => {
   }
 
   // empirik (Andrews) çizgiler: noktalı, ucunda kısa adı
-  if (m.alasimli && st.katman.emp) {
+  if (m.alasimli && st.katman.emp && !donusumsuzRejim()) {
     const yol = (f, c0, c1) => {
       const p = [];
       for (let i = 0; i <= 120; i++) { const C = c0 + (c1 - c0) * i / 120; p.push((i ? 'L' : 'M') + sx(C).toFixed(1) + ',' + sy(f(C)).toFixed(1)); }
@@ -307,13 +310,51 @@ function alasKartiKur() {
   kesitGuncelle();
 }
 
+/* Sunucu varsa arama orada yapılır (546 çelik; EN, W.Nr., AISI, UNS, JIS, GOST... hangi normla yazılırsa) */
+const API_ARAMA = { q: null, istenen: null, sonuc: [], toplam: 0, zaman: 0 };
+function apiAra(q) {
+  if (API_ARAMA.istenen === q) return;
+  API_ARAMA.istenen = q;
+  clearTimeout(API_ARAMA.zaman);
+  API_ARAMA.zaman = setTimeout(async () => {
+    try {
+      const r = await apiIstek(`/api/v1/steels?q=${encodeURIComponent(q)}&limit=40`);
+      if (API_ARAMA.istenen !== q) return;
+      Object.assign(API_ARAMA, { q, sonuc: r.items, toplam: r.total });
+      if (!$('celikListe').hidden) listeAc();
+    } catch (e) { API_ARAMA.istenen = null; }
+  }, 150);
+}
+const hesapRozet = () => `<span class="hesap-var" title="${t('hesap.var.ipucu')}">● ${t('hesap.var')}</span>`;
+function apiListeHtml() {
+  return API_ARAMA.sonuc.map((c) => {
+    const m = c.matched;
+    const eslesen = m && sade(m.code) !== sade(c.standard_name) ? `${m.approx ? '≈ ' : ''}${t('norm.' + m.system)} ${m.code}` : '';
+    return `<div class="celik-oge" data-secim="a:${c.id}" role="option">
+      <div><b>${esc(c.standard_name)}</b> <span class="soluk">${esc(eslesen)}</span>${c.isopleth_available ? hesapRozet() : ''}</div>
+      <div class="alt">${esc(DIL === 'en' ? c.group_en : c.group)}</div></div>`;
+  }).join('') + (API_ARAMA.toplam > API_ARAMA.sonuc.length
+    ? `<div class="celik-bos">${t('api.dahaFazla', { n: API_ARAMA.toplam - API_ARAMA.sonuc.length })}</div>` : '');
+}
+
 function listeAc() {
   const q = sade($('celikAra').value);
   const eslesir = (...alanlar) => !q || alanlar.some((a) => a && sade(a).includes(q));
   const kayitli = kayitliCelikler.filter((c) => eslesir(c.ad));
   // iki dilde de aranır: İngilizce arayüzde "yay" da "spring" de bulur
   const kut = KUTUPHANE.filter((c) => eslesir(c.ad, c.no, c.aisi, c.grup, c.kullanim, c.grup_en, c.kullanim_en));
-  const hesap = (anahtar) => (kesitVar(anahtar) ? `<span class="hesap-var" title="${t('hesap.var.ipucu')}">● ${t('hesap.var')}</span>` : '');
+  const hesap = (anahtar) => (kesitVar(anahtar) ? hesapRozet() : '');
+  if (API.hazir) {
+    apiAra($('celikAra').value.trim());
+    const kayitliHtml = kayitli.map((c) => `
+      <div class="celik-oge kayitli" data-secim="k:${encodeURIComponent(c.ad)}" role="option">
+        <div><b>${esc(c.ad)}</b> <span class="etiket-kayitli">${t('kayitli')}</span></div>
+        <button class="oge-sil" data-kayit-sil="${encodeURIComponent(c.ad)}" title="${t('kayit.sil')}">×</button>
+      </div>`).join('');
+    $('celikListe').innerHTML = (kayitliHtml + apiListeHtml()) || `<div class="celik-bos">${t(API_ARAMA.q == null ? 'api.araniyor' : 'ara.bos')}</div>`;
+    $('celikListe').hidden = false;
+    return;
+  }
   const kayitliHtml = kayitli.map((c) => `
     <div class="celik-oge kayitli" data-secim="k:${encodeURIComponent(c.ad)}" role="option">
       <div><b>${esc(c.ad)}</b> <span class="etiket-kayitli">${t('kayitli')}</span>${hesap(alasAnahtari(c.alas))}</div>
@@ -330,8 +371,28 @@ function listeAc() {
 }
 function listeKapat() { $('celikListe').hidden = true; }
 
+/** Sunucu kütüphanesinden çelik: bileşim, normlar, aile (kesit) ve sınıf (ısıl işlem rejimi) */
+let API_CELIK = null;
+async function apiCelikSec(id, noktayaGit = true) {
+  listeKapat();
+  $('celikAra').blur();
+  let c;
+  try { c = await apiIstek(`/api/v1/steels/${id}`); } catch (e) { bildir(t('api.hata'), 'hata', 8000); return; }
+  const nom = Object.fromEntries(c.composition.map((x) => [x.element, x.nominal]));
+  API_CELIK = c;
+  st.celik = { tur: 'api', id: c.id, ad: c.standard_name, C: nom.C ?? null, aile: c.alloy_family_id, kesit: c.isopleth_available };
+  for (const e of ELEMENTLER) st.alas[e.s] = nom[e.s] || 0;
+  alasGirisleriniYaz();
+  $('celikAra').value = c.standard_name;
+  celikBilgiYaz();
+  kesitGuncelle();
+  rejimGuncelle();
+  if (noktayaGit && nom.C != null) sec(nom.C, null); else guncelle();
+}
+
 function secimUygula(secim) {
   const [tur, adK] = [secim.slice(0, 1), decodeURIComponent(secim.slice(2))];
+  if (tur === 'a') { apiCelikSec(+adK); return; }
   let C, alas;
   if (tur === 'k') {
     const c = kayitliCelikler.find((x) => x.ad === adK);
@@ -369,6 +430,20 @@ function celikBilgiYaz() {
     k.innerHTML = `<span class="etiket-kayitli">${t('kayitli')}</span> <b>${esc(st.celik.ad)}</b> · ${t('kayitli.aciklama')}`;
     return;
   }
+  if (st.celik.tur === 'api') {
+    const c = API_CELIK;
+    if (!c || c.id !== st.celik.id) { k.innerHTML = `<b>${esc(st.celik.ad)}</b>`; return; }
+    const adlar = Object.entries(c.designations).filter(([s, l]) => !(s === 'EN' && l.length === 1 && l[0].code === c.standard_name))
+      .map(([s, l]) => `${t('norm.' + s)} ${l.map((d) => (d.approx ? '≈' : '') + esc(d.code)).join(', ')}`).join(' · ');
+    const aralik = c.composition.map((x) => `${x.element} ${x.min == null ? fmt(x.nominal, 2)
+      : (x.min > 0 ? fmt(x.min, 2) + '–' : '≤ ') + fmt(x.max, 2)}`).join(' · ');
+    const kullanim = DIL === 'en' ? c.usage_en : c.usage_tr;
+    k.innerHTML = `<b>${esc(c.standard_name)}</b> · ${esc(DIL === 'en' ? c.group_en : c.group)}
+      ${adlar ? `<div class="soluk">${adlar}</div>` : ''}
+      ${c.standard_code || kullanim ? `<div class="soluk">${esc([c.standard_code, kullanim].filter(Boolean).join(' · '))}</div>` : ''}
+      <div class="soluk">${t(c.composition.some((x) => x.min != null) ? 'celik.aralik' : 'api.bilesim', { aralik })}</div>`;
+    return;
+  }
   const c = KUTUPHANE.find((x) => x.ad === st.celik.ad);
   const aralik = Object.entries(c.aralik).map(([e, [a, b]]) =>
     `${e} ${a > 0 ? fmt(a, 2) + '–' : '≤ '}${fmt(b, 2)}`).join(' · ');
@@ -404,17 +479,31 @@ function kayitliSil(adK) {
 
 /** Detay açık + bu alaşımın kesiti hesaplanmış + kutu işaretli ise gerçek hesaba geç */
 function kesitGuncelle() {
-  const anahtar = alasAnahtari();
-  const hazir = kesitVar(anahtar);
+  // sunucu çeliği: kesit, çeliğin alaşım ailesininki (yakın bileşimli çelikler aynı kesiti paylaşır)
+  const api = st.celik && st.celik.tur === 'api';
+  const anahtar = api ? (st.celik.kesit ? 'api:' + st.celik.aile : '') : alasAnahtari();
+  const hazir = !!anahtar && kesitVar(anahtar);
   const ad = st.celik ? st.celik.ad : t('girilen.bilesim');
   if (st.detay && hazir && $('gercekSec').checked) kesitAc(anahtar, { ad, C: st.celik ? st.celik.C : null });
   else kesitKapat();
   const alasimli = ELEMENTLER.some((e) => st.alas[e.s] > 0);
   $('gercekNot').textContent = hazir
-    ? t('gercek.var', { ad: st.celik ? st.celik.ad : t('bu.bilesim') })
-    : st.celik && st.celik.tur === 'kutuphane'
+    ? t(api ? 'api.kesitVar' : 'gercek.var', { ad: st.celik ? st.celik.ad : t('bu.bilesim') })
+    : st.celik && st.celik.tur !== 'kayitli'
       ? t('gercek.sirada', { ad: st.celik.ad })
       : alasimli ? t('gercek.yok') : t('gercek.ipucu');
+}
+
+/** Isıl işlem rejimi sunucudan: kütüphane çeliğinde sınıfı belli; elle girilende Cr ≥ %10,5 ise sorulur
+    (paslanmaz olabilir). Elle girilen bileşimde karbon değiştikçe istek, imleç durduktan sonra gider. */
+let rejimZaman = 0;
+function rejimGuncelle() {
+  clearTimeout(rejimZaman);
+  if (!API.hazir || !st.detay) return rejimIste(null);
+  if (st.celik && st.celik.tur === 'api') return rejimIste({ id: st.celik.id });
+  if (st.alas.Cr < 10.5) return rejimIste(null);
+  const bilesim = { C: +st.C.toFixed(3), ...Object.fromEntries(ELEMENTLER.filter((e) => st.alas[e.s] > 0).map((e) => [e.s, st.alas[e.s]])) };
+  if (JSON.stringify({ bilesim }) !== REJIM.anahtar) rejimZaman = setTimeout(() => rejimIste({ bilesim }), 600);
 }
 function alasGirisleriniYaz() {
   $('kAlas').querySelectorAll('input[data-el]').forEach((i) => { i.value = sayiYaz(st.alas[i.dataset.el]); });
@@ -450,7 +539,7 @@ function katmanGuncelle() {
   document.body.classList.toggle('detay-acik', st.detay);
   document.body.classList.toggle('kesit-acik', !!KAYNAK.alt);
   $('katmanlar').hidden = !st.detay;
-  $('bantLejant').hidden = !st.detay || !st.katman.bant;
+  $('bantLejant').hidden = !st.detay || !st.katman.bant || donusumsuzRejim();
   const alasimli = model().alasimli;
   $('katmanlar').querySelectorAll('button').forEach((b) => {
     // empirik çizgiler sadece alaşım girilmişse anlamlı
@@ -467,11 +556,64 @@ function katmanGuncelle() {
   if (html !== sonBantLejant) { $('bantLejant').innerHTML = html; sonBantLejant = html; }
 }
 
+/* ---------- paslanmaz / dönüşümsüz rejim kartları (sunucudan, api.js) ---------- */
+function rejimKartlari(r) {
+  const T0 = (T) => (T == null ? '—' : fmt(T, 0) + ' °C');
+  const aralik = (a) => (a ? `${fmt(a[0], 0)}–${fmt(a[1], 0)} °C` : '—');
+  const kare = (ad, deger, alt) => `<div class="kare"><b>${ad}</b><span>${deger}</span>${alt ? `<div class="kucuk soluk">${alt}</div>` : ''}</div>`;
+  const c = r.calphad;
+  const ust = {
+    solution_annealing: kare(t('rejim.cozeltme'), aralik(r.solution_annealing)) + kare(t('rejim.karburCoz'), T0(c.carbide_solvus), 'M₂₃C₆') + kare(t('rejim.sigma'), T0(c.sigma_solvus)),
+    duplex: kare(t('rejim.cozeltme'), aralik(r.solution_annealing)) + kare(t('rejim.sigma'), T0(c.sigma_solvus)) + kare(t('rejim.g475'), aralik(r.embrittlement_475)),
+    ferritic: kare(t('rejim.tavlama'), aralik(r.annealing)) + kare(t('rejim.g475'), aralik(r.embrittlement_475)) + kare(t('rejim.sigma'), T0(c.sigma_solvus)),
+    no_transformation: kare(t('rejim.karburCoz'), T0(c.carbide_solvus)) + kare(t('rejim.sigma'), T0(c.sigma_solvus)) + kare(t('rejim.sinif'), t('sinif.' + r.steel_class)),
+  }[r.mode];
+  const satirlar = [];
+  if (r.sensitization) {
+    const s = r.sensitization;
+    satirlar.push(`<tr><td><b>${t('rejim.hassas')}</b> <span class="risk risk-${s.risk}">${t('rejim.risk.' + s.risk)}</span><br>
+      <span class="soluk">${t('rejim.hassas.' + s.reason_code)}</span></td><td class="sag"><b>${aralik(s.range)}</b></td></tr>`);
+  }
+  if (r.mode === 'solution_annealing' || r.mode === 'duplex') {
+    satirlar.push(`<tr><td><b>${t('rejim.suVerme')}</b><br><span class="soluk">${t('rejim.suVerme.' + r.mode)}</span></td><td></td></tr>`);
+  }
+  const notlar = [];
+  if (c.carbide_solvus && r.solution_annealing && c.carbide_solvus > r.solution_annealing[0]) notlar.push(t('rejim.not.karbur', { T: fmt(c.carbide_solvus, 0) }));
+  if (c.sigma_solvus) notlar.push(t('rejim.not.sigma.' + (r.mode === 'solution_annealing' || r.mode === 'duplex' ? r.mode : 'genel'), { T: fmt(c.sigma_solvus, 0) }));
+  if (r.mode === 'ferritic') notlar.push(t('rejim.not.ferritik'));
+  if (r.mode === 'no_transformation') notlar.push(t('rejim.not.donusumsuz'));
+  if (r.ignored_elements && r.ignored_elements.length) notlar.push(t('rejim.not.hesapDisi', { el: r.ignored_elements.join(', ') }));
+
+  $('kIslem').innerHTML = `
+    ${baslik(t('rejim.baslik.' + r.mode), t('rejim.meta'))}
+    <div class="kritik-ust">${ust}</div>
+    ${satirlar.length ? `<table class="liste">${satirlar.join('')}</table>` : ''}
+    ${notlar.map((n) => `<div class="kucuk" style="margin-top:8px">${n}</div>`).join('')}
+    <div class="kucuk soluk" style="margin-top:8px">${t('rejim.denge')}</div>`;
+
+  $('kSogu').innerHTML = r.mode === 'solution_annealing' ? `
+    ${baslik(t('kart.sogu'), t('rejim.donusumYok'))}
+    <table class="liste">
+      <tr><td>${t('rejim.ms')} <span class="soluk">· Eichelman–Hull</span></td><td class="sag"><b>${fmt(r.Ms, 0)} °C</b></td></tr>
+      <tr><td>Md30 <span class="soluk">· Angel</span></td><td class="sag"><b>${fmt(r.Md30, 0)} °C</b></td></tr>
+    </table>
+    <div class="kucuk" style="margin-top:8px">${t(r.Ms < -100 ? 'rejim.ms.dusuk' : 'rejim.ms.var')}</div>
+    <div class="kucuk" style="margin-top:6px">${t(r.Md30 > 0 ? 'rejim.md30.var' : 'rejim.md30.yok')}</div>`
+    : `${baslik(t('kart.sogu'), '')}<div class="kucuk">${t('rejim.sogu.' + r.mode)}</div>`;
+}
+
 KANCA.panel.push(() => {
   const acik = st.detay;
   for (const id of ['kAlas', 'kIslem', 'kSogu']) $(id).hidden = !acik;
+  rejimGuncelle();
   katmanGuncelle();
   if (!acik) return;
+  if (donusumsuzRejim()) { rejimKartlari(REJIM.veri); return; }
+  if (REJIM.bekliyor && (st.celik?.tur === 'api' || st.alas.Cr >= 10.5)) {
+    $('kIslem').innerHTML = `${baslik(t('kart.islem'), '')}<div class="kucuk soluk"><span class="donen kucuk-donen"></span> ${t('rejim.bekliyor')}</div>`;
+    $('kSogu').innerHTML = `${baslik(t('kart.sogu'), '')}<div class="kucuk soluk">${t('rejim.bekliyor')}</div>`;
+    return;
+  }
   const w = st.C, m = model(), a = st.alas;
   const k = kritik(w, m), gercek = k.kaynak === 'hesap';
   const hipo = k.hipo;
@@ -618,4 +760,13 @@ function dilDurumuTopla() {
   alasGirisleriniYaz();
   if (d.celik && d.celik.ad) { st.celik = d.celik; $('celikAra').value = d.celik.ad; celikBilgiYaz(); }
   if (d.detay) detayAyarla(true); else kesitGuncelle();
+  // sunucu çeliği: ayrıntılar (normlar, aralıklar, rejim) sunucu hazır olunca yeniden alınır
+  if (d.celik && d.celik.tur === 'api') apiHazirOlunca(() => apiCelikSec(d.celik.id, false));
 })();
+
+/* Sunucu bulununca: arama listesi açıksa sunucu sonuçlarıyla yenile, rejim ve kesit durumunu güncelle */
+apiHazirOlunca(() => {
+  if (!$('celikListe').hidden) listeAc();
+  kesitGuncelle();
+  guncelle();
+});

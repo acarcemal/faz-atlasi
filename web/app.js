@@ -56,9 +56,10 @@ const st = {
 // Türkçe: %0,45 · 1.200 °C   English: 0.45% · 1,200 °C
 const fmt = (n, d = 2) => Number(n).toLocaleString(YEREL, { minimumFractionDigits: d, maximumFractionDigits: d });
 const yuzde = (s) => (DIL === 'tr' ? '%' + s : s + '%');
-const fmtC = (w) => yuzde(fmt(w, w < 0.1 ? 4 : w < 1 ? 3 : 2));
+// null: değer henüz hesaplanmadı (sunucudan bekleniyor) ya da yok
+const fmtC = (w) => (w == null ? '—' : yuzde(fmt(w, w < 0.1 ? 4 : w < 1 ? 3 : 2)));
 const fmtT = (T) => fmt(T, 0) + ' °C';
-const fmtP = (f) => yuzde(fmt(f * 100, 1));
+const fmtP = (f) => (f == null ? '…' : yuzde(fmt(f * 100, 1)));
 /* Sayı kutuları: ondalık ayırıcıyı bilgisayarın dili değil uygulamanın dili belirler (TR 0,45 · EN 0.45).
    Bu yüzden type="text" + inputmode="decimal"; okurken virgül de nokta da kabul edilir. */
 const sayiYaz = (n) => (DIL === 'tr' ? String(n).replace('.', ',') : String(n));

@@ -13,6 +13,7 @@ from datetime import datetime
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, select
 from sqlalchemy.orm import sessionmaker
 
@@ -81,10 +82,12 @@ def steels(q: str = '', system: str | None = Query(None, description='EN, WNR, A
            steel_class: str | None = None, limit: int = Query(50, ge=1, le=500), offset: int = Query(0, ge=0),
            s=Depends(oturum)):
     sonuc = search(s, q, system=system, steel_class=steel_class, limit=offset + limit)
+    hesapli = set(s.scalars(select(AlloyFamily.id).where(AlloyFamily.isopleth_boundaries.is_not(None))))
     items = [schemas.SteelSummary(
         id=r['steel'].id, name=r['display_name'], standard_name=r['steel'].standard_name, matched=_ad(r['matched']),
         group=r['steel'].group_name, group_en=r['steel'].group_name_en, steel_class=r['steel'].steel_class,
-        alloy_family_id=r['steel'].alloy_family_id) for r in sonuc[offset:]]
+        alloy_family_id=r['steel'].alloy_family_id, isopleth_available=r['steel'].alloy_family_id in hesapli)
+        for r in sonuc[offset:]]
     return schemas.SteelList(total=len(sonuc), items=items)
 
 
@@ -164,3 +167,9 @@ def equilibrium_point(req: schemas.PointRequest):
         raise HTTPException(422, str(e))
     except RuntimeError as e:
         raise HTTPException(500, str(e))
+
+
+# Web arayüzü aynı sunucudan: http://localhost:8000/ (API yolları yukarıda tanımlı olduğu için önceliklidir)
+WEB = os.environ.get('FAZ_WEB_DIR') or os.path.join(os.path.dirname(__file__), '..', '..', '..', 'web')
+if os.path.isdir(WEB):
+    app.mount('/', StaticFiles(directory=WEB, html=True), name='web')

@@ -101,12 +101,13 @@ def _calphad(ps, bilesim):
 
 def _hassaslasma_riski(nom):
     c, ti, nb = _e(nom, 'C'), _e(nom, 'Ti'), _e(nom, 'Nb')
+    """(risk, neden kodu, açıklama). Kod arayüzün kendi dilinde metin seçmesi içindir."""
     if ti >= 5 * c or nb >= 10 * c:
-        return 'low', 'Ti/Nb ile kararlı kılınmış: karbon Cr yerine TiC/NbC olarak bağlanır.'
+        return 'low', 'stabilized', 'Ti/Nb ile kararlı kılınmış: karbon Cr yerine TiC/NbC olarak bağlanır.'
     if c <= 0.03:
-        return 'low', 'Düşük karbonlu (L) kalite: kaynak ısıl etkisinde Cr karbür çökmesi sınırlı.'
-    return 'high', ('C > %0,03 ve kararlı kılınmamış: 500–800 °C aralığında tutulursa (kaynak, yavaş soğuma) '
-                    'tane sınırlarında Cr23C6 çöker, çevresi kromca fakirleşir → taneler arası korozyon.')
+        return 'low', 'low_carbon', 'Düşük karbonlu (L) kalite: kaynak ısıl etkisinde Cr karbür çökmesi sınırlı.'
+    return 'high', 'unstabilized', ('C > %0,03 ve kararlı kılınmamış: 500–800 °C aralığında tutulursa (kaynak, yavaş '
+                                    'soğuma) tane sınırlarında Cr23C6 çöker, çevresi kromca fakirleşir → taneler arası korozyon.')
 
 
 def mode_for(steel_class):
@@ -149,11 +150,11 @@ def rejim(steel_class, nom, ps=None):
     T['Ae1'] = T['Ae3'] = T['delta_ferrite'] = None
     out['hide'] = ['hardening', 'A1', 'A3']
     if mod == 'solution_annealing':
-        risk, aciklama = _hassaslasma_riski(nom)
+        risk, kod, aciklama = _hassaslasma_riski(nom)
         ms, md30 = ms_eichelman_hull(nom), md30_angel(nom)
         out.update({
             'solution_annealing': [1050, 1100], 'quench': 'Su veya hızlı hava (karbürler yeniden çökmeden 800–500 °C hızla geçilmeli)',
-            'sensitization': {'range': [500, 800], 'risk': risk, 'reason': aciklama},
+            'sensitization': {'range': [500, 800], 'risk': risk, 'reason_code': kod, 'reason': aciklama},
             'Ms': round(ms), 'Ms_method': 'Eichelman & Hull (1953)',
             'Ms_text': 'Oda sıcaklığının çok altında; soğutmayla martenzit oluşmaz.' if ms < -100 else None,
             'Md30': round(md30), 'Md30_method': 'Angel (1954)',
