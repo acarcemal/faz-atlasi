@@ -81,11 +81,12 @@ class Engine:
     PDENS = int(os.environ['FAZ_PDENS']) if os.environ.get('FAZ_PDENS') else None
     HIZLI_PDENS = 30
 
-    def __init__(self, tdb=TDB, model_kapasite=16):
+    def __init__(self, tdb=TDB, model_kapasite=None):
         self.tdb_yolu = tdb
         self._db = None
         self._modeller = OrderedDict()   # (elementler, fazlar) -> (models, prf); LRU
-        self._kapasite = model_kapasite
+        # toplu kesit hesabında işlemler aileden aileye geçer: eski sistemleri bellekte tutmamak için küçük tutulur
+        self._kapasite = model_kapasite or int(os.environ.get('FAZ_MODEL_CACHE', 16))
         self.kilit = threading.Lock()     # pycalphad iş parçacığı güvenli değil; çağrılar sıraya girer
         with open(tdb, 'rb') as f:
             self.tdb_ozet = hashlib.sha256(f.read()).hexdigest()[:16]

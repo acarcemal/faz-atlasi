@@ -148,9 +148,11 @@ def cizgiler(satirlar):
     return [{'between': [list(c['tur'][0]), list(c['tur'][1])], 'pts': c['pts']} for c in biten]
 
 
-def isopleth(bilesim, C_ref, T_min=550, T_max=1100, dT=5, C_max=1.8, islemci=None):
+def isopleth(bilesim, C_ref, T_min=550, T_max=1100, dT=5, C_max=1.8, islemci=None, havuz=None):
     """
     bilesim: alaşım elementleri ağ.% (büyük harf, C hariç), C_ref: alaşım mol kesirlerinin sabitlendiği karbon.
+    havuz: dışarıdan verilen işlem havuzu (birçok aile art arda hesaplanırken işlemler TDB'yi bir kez yükler);
+    verilirse islemci havuzun boyudur.
     Dönüş: JSON'a hazır sözlük (alloy_families.isopleth_boundaries).
     """
     t0 = time.time()
@@ -158,8 +160,12 @@ def isopleth(bilesim, C_ref, T_min=550, T_max=1100, dT=5, C_max=1.8, islemci=Non
     islemci = islemci or int(os.environ.get('FAZ_TRACE_PROCS', 1))
     if islemci > 1:
         parcalar = [list(p) for p in np.array_split(Ts, islemci) if len(p)]
-        with get_context('spawn').Pool(len(parcalar)) as pool:
-            sonuc = pool.map(_parca, [(bilesim, C_ref, [float(T) for T in p], C_max) for p in parcalar])
+        isler = [(bilesim, C_ref, [float(T) for T in p], C_max) for p in parcalar]
+        if havuz is not None:
+            sonuc = havuz.map(_parca, isler, chunksize=1)
+        else:
+            with get_context('spawn').Pool(len(parcalar)) as pool:
+                sonuc = pool.map(_parca, isler)
         satirlar = [s for p, _ in sonuc for s in p]
         n = sum(k for _, k in sonuc)
     else:
