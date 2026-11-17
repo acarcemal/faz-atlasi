@@ -15,7 +15,7 @@ API.taban = (() => {
   const url = new URLSearchParams(location.search).get('api');
   if (url) { try { localStorage.setItem('fec-api', url); } catch (e) { /* gizli pencere */ } return url.replace(/\/$/, ''); }
   try { const k = localStorage.getItem('fec-api'); if (k) return k.replace(/\/$/, ''); } catch (e) { /* gizli pencere */ }
-  return location.protocol.startsWith('http') ? '' : null;
+  return location.protocol.startsWith('http') && !location.hostname.endsWith('.github.io') ? '' : null;
 })();
 
 async function apiIstek(yol, govde, sure = 30000) {
@@ -64,7 +64,7 @@ function scriptYukle(src) {
 }
 const YERELVERI = { celik: new Map(), aile: {}, bekleyen: {} };
 async function yerelYukle() {
-  try { await scriptYukle('veri/kutuphane/celikler2.js'); } catch (e) { return false; }
+  try { await scriptYukle('veri/kutuphane/celikler2.js?v=24'); } catch (e) { return false; }
   const K = window.KUTUPHANE_V2;
   if (!K || !K.celikler) return false;
   for (const c of K.celikler) YERELVERI.celik.set(c.id, c);

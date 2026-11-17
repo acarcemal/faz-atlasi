@@ -301,13 +301,16 @@ values in the literature.</p>
   <li>Ms: Andrews (1965) linear equation. Retained austenite: Koistinen &amp; Marburger (1959).</li>
   <li>As-quenched hardness: Hodge &amp; Orehoski (1946). Hardenability: ASTM A255 (Grossmann D<sub>I</sub>), grain size 7.</li>
 </ul>
-<h4>Steel library</h4>
-<p>63 low-alloy steels; composition ranges from EN ISO 683-1/-2/-3/-17, EN 10025-2, EN 10083, EN 10085, EN 10089, EN 10132, ISO 4957, EN 10213 and
-EN 10293, with the nominal value taken as the middle of the range. P, S, B, Al, N, Nb and Ti are not included in the model.</p>
+<h4>Steel library and alloy families</h4>
+<p>546 steels across carbon, low-alloy, case-hardening, spring, bearing, tool and stainless grades (EN/ISO standards and two Mendeley open datasets),
+searchable by EN, W.Nr., AISI/SAE, UNS, ASTM, JIS and GOST designations. Steels with close alloy contents share one of <b>336 calculated alloy-family
+isopleths</b>; grades whose own critical temperatures deviate by more than 5 °C from their family get a sub-family of their own, while the rest are
+shifted piecewise-linearly to their own CALPHAD critical temperatures. Calculated Ae1/Ae3 temperatures are validated against 746 dilatometric Ac1/Ac3
+measurements from the Cambridge MAP dataset (Gavard et al., 1996).</p>
 <h4>Limitations</h4>
 <ul>
   <li>All diagram values are <b>equilibrium</b> values; real heating and cooling deviate depending on rate.</li>
-  <li>Stainless and high-alloy tool steels (sigma and Laves phases) are outside the current scope.</li>
+  <li>N, Ti, Nb, Al, Co and B are not in the thermodynamic model yet; when present, the app displays an explicit notice.</li>
   <li>Predicted cooling structures are rough; for definitive results use the steel's CCT diagram and the supplier's data sheet.</li>
 </ul>
 <h4>References</h4>
@@ -316,9 +319,10 @@ EN 10293, with the nominal value taken as the middle of the range. P, S, B, Al, 
   <li>Fe–C assessment — Fei &amp; Brosh (2014), <code>cfe_broshe.tdb</code>.</li>
   <li>The alloy steel isopleths are produced from the MatCalc mc_fe v2.062 database by E. Povoden-Karadeniz and A. Jacob (TU Wien), which is made
   available under the <b>Open Database License (ODbL)</b>.</li>
+  <li>Validation dataset — MAP_DATA_AUSTENMAT, L. Gavard, H.K.D.H. Bhadeshia, D.J.C. MacKay, S. Suzuki, <i>Mater. Sci. Technol.</i> 12 (1996) 453–463.</li>
 </ul>
 <div class="ozet">Faz Atlası is intended for education and preliminary design. Temperatures used in production must be confirmed against the mill certificate
 and the supplier's data.</div>
-<p class="not-satir">Faz Atlası v1.0 · 63 steels, 52 calculated isopleths · open source</p>`,
+<p class="not-satir">Faz Atlası v2.0 · 546 steels, 336 alloy-family isopleths · open source</p>`,
   },
 };

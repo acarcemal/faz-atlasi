@@ -1,93 +1,76 @@
-# Faz Atlası 2.0 — backend
+# Faz Atlası 2.0 — Backend & Calculation Engine
 
-Çelik kütüphanesi (SQLite/PostgreSQL), alaşım aileleri, sınır izlemeli dikey kesitler ve tek nokta CALPHAD dengesi
-için FastAPI servisi.
+**English** · [Türkçe](README.tr.md)
 
-## Kurulum (yerel)
+FastAPI service and static-export pipeline for the 546-steel database (SQLite / PostgreSQL), alloy-family clustering, boundary-traced vertical sections (isopleths), and single-point CALPHAD equilibrium calculations.
+
+## Local setup
 
 ```bash
 .venv/Scripts/pip install -r backend/requirements.txt -r backend/requirements-api.txt
-.venv/Scripts/python backend/build_db.py                      # backend/data/faz_atlasi.db
-.venv/Scripts/python backend/trace_families.py --celik 42CrMo4 # bir ailenin kesiti
+.venv/Scripts/python backend/build_db.py                      # builds backend/data/faz_atlasi.db
+.venv/Scripts/python backend/trace_families.py --celik 42CrMo4 # traces one alloy family's isopleth
 .venv/Scripts/python -m uvicorn faz_atlasi.api.main:app --app-dir backend --port 8000
 ```
 
-API belgeleri: http://localhost:8000/docs. Testler: `.venv/Scripts/python -m pytest backend/tests -q`.
+Interactive API docs: `http://localhost:8000/docs`. Run tests: `.venv/Scripts/python -m pytest backend/tests -q`.
 
-TDB (`hesap/tdb/mc_fe_pycalphad.tdb`) depoda yok; ana README'deki adresten indirilip `hesap/tdb_temizle.py` ile üretilir.
+The adapted thermodynamic database (`hesap/tdb/mc_fe_pycalphad.tdb`) is generated from `mc_fe_v2062.tdb` using `hesap/tdb_temizle.py` (see the main [README](../README.md)).
 
-## Uç noktalar
+## REST API endpoints
 
-| | |
+| Endpoint | Purpose |
 |---|---|
-| `GET /api/v1/steels?q=&system=&steel_class=&limit=&offset=` | Her normla arama (42CrMo4, 1.7225, 4140, SCM440, G41400); `system=JIS` o normdaki adlarla listeler |
-| `GET /api/v1/steels/{id}` | Normlar, bileşim aralıkları, sınıf, aile, kaynaklar |
-| `GET /api/v1/families/{id}` | Aile bileşimi, üye sayısı, kesit durumu |
-| `GET /api/v1/isopleth/{family_id}` | Kesit: satır bölgeleri (`rows`) ve sınır çizgileri (`lines`) |
-| `GET /api/v1/steels/{id}/heat-treatment` | Sınıfa göre ısıl işlem rejimi (aşağıda) |
-| `GET /api/v1/steels/{id}/family-fit` | Çeliğin kritik sıcaklıklarının ailesinin kesitindekilerden farkı (aşağıda) |
-| `POST /api/v1/heat-treatment` | `{"composition": {...}, "steel_class": null}` → kullanıcı bileşimi için aynı rejim; sınıf verilmezse kestirilir |
-| `POST /api/v1/equilibrium/point` | `{"composition": {"C": 0.42, "Cr": 1.05, ...}, "T": 760}` → faz oranları, fazlardaki karbon, faz bileşimleri |
+| `GET /api/v1/steels?q=&system=&steel_class=&limit=&offset=` | Search across all standards (42CrMo4, 1.7225, 4140, SCM440, G41400); `system=JIS` lists designations in that standard |
+| `GET /api/v1/steels/{id}` | Designations, composition ranges, steel class, alloy family, data sources |
+| `GET /api/v1/families/{id}` | Family base composition, member count, isopleth status |
+| `GET /api/v1/isopleth/{family_id}` | Calculated isopleth: row phase fields (`rows`) and boundary curves (`lines`) |
+| `GET /api/v1/steels/{id}/heat-treatment` | Heat-treatment regime by steel class (see below) |
+| `GET /api/v1/steels/{id}/family-fit` | Deviation between the steel's own critical temperatures and its family's isopleth |
+| `POST /api/v1/heat-treatment` | `{"composition": {...}, "steel_class": null}` → regime for a custom composition (class inferred if omitted) |
+| `POST /api/v1/equilibrium/point` | `{"composition": {"C": 0.42, "Cr": 1.05, ...}, "T": 760}` → phase fractions, carbon in each phase, phase compositions |
 
-## Isıl işlem rejimi (`faz_atlasi/calc/isil_islem.py`)
+## Heat-treatment regimes (`faz_atlasi/calc/isil_islem.py`)
 
-| Mod | Sınıf | Döndürülen |
+| Mode | Steel class | Returned values |
 |---|---|---|
-| `transformation` | karbon/düşük alaşımlı, martenzitik paslanmaz | Ae1, Ae3, karbür çözünme, δ-ferrit başlangıcı (CALPHAD); sertleştirme Ae3 + 30–50 °C; Ms (Andrews) |
-| `solution_annealing` | östenitik paslanmaz | A1/A3 gizlenir (`hide`); çözeltiye alma 1050–1100 °C; hassaslaşma 500–800 °C ve risk (C ≤ %0,03 ya da Ti ≥ 5C / Nb ≥ 10C → düşük); M23C6 ve σ çözünme (CALPHAD); Ms (Eichelman–Hull), Md30 (Angel) |
-| `duplex` | dupleks | çözeltiye alma 1020–1100 °C, σ çözünme, 475 °C gevrekleşmesi |
-| `ferritic` | ferritik paslanmaz | tavlama 750–850 °C, 475 °C gevrekleşmesi, σ |
-| `no_transformation` | Hadfield, Fe-Ni, yarı östenitik | sadece CALPHAD sıcaklıkları |
+| `transformation` | Carbon / low-alloy, martensitic stainless | Ae1, Ae3, carbide solvus, δ-ferrite start (CALPHAD); hardening window Ae3 + 30–50 °C; Ms (Andrews) |
+| `solution_annealing` | Austenitic stainless | A1/A3 hidden (`hide`); solution annealing 1050–1100 °C; sensitization 500–800 °C & risk level (low if C ≤ 0.03% or Ti ≥ 5C / Nb ≥ 10C); M₂₃C₆ and σ solvus (CALPHAD); Ms (Eichelman–Hull), Md30 (Angel) |
+| `duplex` | Duplex stainless | Solution annealing 1020–1100 °C, σ solvus, 475 °C embrittlement range |
+| `ferritic` | Ferritic stainless | Annealing 750–850 °C, 475 °C embrittlement range, σ solvus |
+| `no_transformation` | Hadfield austenitic Mn, Fe–Ni, semi-austenitic | CALPHAD equilibrium transition temperatures only |
 
-CALPHAD sıcaklıkları denge değerleridir (Ac/Ar değil): 450–1350 °C arası 50 °C tarama + ±2 °C'ye ikiye bölme.
-Bir çelik ilk sorulduğunda 1–16 s (yeni alaşım sistemi derleniyorsa uzun), sonra önbellekten.
+All CALPHAD transition temperatures are equilibrium values (not Ac/Ar), found by scanning 450–1350 °C in 50 °C steps followed by bisection to ±2 °C. First uncached evaluation takes 1–16 s (longer if a new component subset is compiled), then served from cache.
 
-## Alt aileler ve çelik–aile uyumu (`calc/sapma.py`, `library/alt_aile.py`)
+## Sub-families and steel–family fit (`calc/sapma.py`, `library/alt_aile.py`)
 
-Aile kesiti ailenin (kurucu çeliğin) alaşımıyla hesaplanır; bileşim toleransı içindeki farklar aynı yöne
-toplanınca bir çeliğin kritik sıcaklıkları kesittekilerden 15–20 °C ayrışabiliyor. Bu yüzden her çelik ailesine
-karşı CALPHAD ile ölçülür: çeliğin kendi bileşimi ile aile bileşiminde, çeliğin karbonunda Ae1, Ae3, karbür ve σ
-çözünme, δ-ferrit başlangıcı (aynı yöntem, ±2 °C).
+Each family isopleth is traced using the base alloy composition of the family's founding grade. When composition tolerances accumulate in the same direction, a member steel's critical temperatures can drift by 15–20 °C from the family section. Every steel is therefore checked against its family via CALPHAD at the steel's nominal carbon (Ae1, Ae3, carbide and σ solvus, δ-ferrite start to ±2 °C):
 
-* **Fark > 5 °C** (kesitin satır aralığı) ya da bir geçiş birinde var ötekinde yok: çelik ailesinden ayrılır. Önce
-  bileşimce yakın başka bir mevcut aileye, sonra bu turda açılan alt ailelere ölçülür; uymazsa kendi bileşimiyle
-  **alt aile** kurar (`alloy_families.parent_id` = eski aile). Ayrılma nedeni `parent_fit` olarak saklanır.
-* **Fark ≤ 5 °C**: çelik ailede kalır; arayüz kesitin sıcaklık eksenini bu çiftlerle parça parça doğrusal kaydırır
-  (`web/kesit.js: sicaklikEsle`). Çeliğin karbonunda çizgiler çeliğin kendi değerine oturur.
-* Kaynakta Mn/Si verilmemiş çeliklere `missing_elements` ile uyarı gösterilir (hesapta 0 sayılıyorlar).
+* **Deviation > 5 °C** (one row step of the isopleth) or a structural transition mismatch: the steel is separated from its parent family. It is first tested against other nearby families and newly created sub-families; if none fit within 5 °C, it forms a new **sub-family** (`alloy_families.parent_id` = original family).
+* **Deviation ≤ 5 °C**: the steel stays in the family, and the web client shifts the temperature axis piecewise-linearly (`web/kesit.js: sicaklikEsle`) so critical lines match the steel's exact temperatures at its nominal carbon.
+* Steels whose source record omits Mn or Si are flagged via `missing_elements` (treated as 0 in the calculation).
 
 ```bash
-.venv/Scripts/python backend/split_families.py                # ölç -> backend/data/alt_aileler.json (veritabanına yazmaz)
-.venv/Scripts/python backend/split_families.py --uygula       # alt aileleri kur, çelikleri taşı (trace bitince)
-.venv/Scripts/python backend/trace_families.py --eksik --uyarlanir   # yeni alt ailelerin kesitleri
+.venv/Scripts/python backend/split_families.py                       # measure deviations -> backend/data/alt_aileler.json
+.venv/Scripts/python backend/split_families.py --uygula              # create sub-families and reassign steels
+.venv/Scripts/python backend/trace_families.py --eksik --uyarlanir   # trace isopleths for the new sub-families
+.venv/Scripts/python backend/export_static.py --hesap 4              # export static files for GitHub Pages / offline use
 ```
 
-`build_db.py` veritabanını baştan kurarken `alt_aileler.json`'u uygular (aile yapısı ölçümden sonra değiştiyse o kayıtlar
-atlanır ve bildirilir). Ölçülmemiş çelik için `GET /api/v1/steels/{id}/family-fit` ölçüp saklar.
+## Benchmarks (12-core laptop, 8 active workers)
 
-## Ölçümler (2026-11-02, 12 çekirdekli dizüstü; aynı anda başka bir hesap 4 çekirdek kullanıyordu)
-
-| | Ölçülen |
+| Operation | Measured time |
 |---|---|
-| Tek nokta, ilk istek (TDB okuma + derleme) | ~15 s; açılışta `FAZ_WARMUP` ile önceden yapılır |
-| Aynı alaşım sisteminin yeni bileşen kümesi, ilk istek | 2–5 s (model derleme; sonra bellekte) |
-| Tek nokta, sıcak (42CrMo4, 5 bileşen) | ~100–140 ms |
-| Tek nokta, sıcak (304, 6 bileşen) | ~70–90 ms |
-| Önbellekten | <1 ms |
-| Kesit, sınır izleme, 42CrMo4, 111 satır, 4 işlem | ~105 s, 4 800 nokta (eski tam ızgara: ~133 s, ~14 000 nokta) |
+| Single point, cold start (TDB load + model compilation) | ~15 s (pre-warmed on startup via `FAZ_WARMUP`) |
+| New component subset of the same alloy system (first call) | 2–5 s (compiled once, then kept in memory) |
+| Single point, warm (42CrMo4, 5 components) | ~100–140 ms |
+| Single point, warm (304, 6 components) | ~70–90 ms |
+| Cached point | <1 ms |
+| Isopleth boundary tracing (42CrMo4, 111 rows, 4 workers) | ~105 s, 4,800 points (vs. ~133 s, ~14,000 points for full grid) |
 
-Kesit, eski ızgarayla 111 satırın 106'sında aynı bölge dizisini veriyor; sınırlar arasındaki fark medyan 0,001, en çok 0,018
-(ağ.% C). Farklı 5 satırdaki fark, genişliği <0,01 olan dört fazlı ince şeritlerden kaynaklanıyor.
+Boundary tracing reproduces the exact phase-field sequence of the full grid on 106 of 111 rows, with a median boundary difference of 0.001 wt% C (max 0.018 wt% C). The 5 differing rows involve four-phase slivers narrower than 0.01 wt% C.
 
-Dokümandaki "20 ms tek nokta" ve "10–15 s kesit" hedefleri pycalphad 0.11.2'nin `equilibrium()` çağrısıyla
-tutmuyor: sürenin ~yarısı başlangıç ızgarası (`calculate`), ~%40'ı çözücü ve dışbükey zarf. Izgara yoğunluğu
-düşürülünce (pdens 30) ~%40 hızlanıyor ama düşük sıcaklıkta çok karbürlü bölgelerde yanlış faz kümesi veriyor;
-bu yüzden tek nokta varsayılan yoğunlukla, kesit taraması hızlı yoğunlukla + bölge başına doğrulamayla yapılıyor.
-pycalphad'ın kendi `IsoplethStrategy`'si aynı kesitte ~300 s sürdü.
+## Known limitations
 
-## Bilinen sınırlar
-
-* `mc_fe_pycalphad.tdb` sadece C, Cr, Cu, Mn, Mo, Ni, Si, V, W içeriyor. N, Ti, Nb, Al, Co, B hesaba girmez; yanıtta
-  `ignored_elements` olarak bildirilir. 304/316'daki N, 321'deki Ti, 2205'teki N bu yüzden ihmal ediliyor.
-* pycalphad iş parçacığı güvenli değil: çağrılar kilitle sıraya girer; ölçekleme konteyner sayısıyla yapılır.
-* Dockerfile ve docker-compose yazıldı ama bu makinede Docker yok; denenmedi. PostgreSQL ile de denenmedi.
+* `mc_fe_pycalphad.tdb` covers Fe, C, Cr, Cu, Mn, Mo, Ni, Si, V, and W. Elements outside the model (N, Ti, Nb, Al, Co, B) are excluded and reported in `ignored_elements`.
+* `pycalphad` is not thread-safe in-process; concurrent requests are serialized with a lock (scale horizontally with multiple workers/containers).

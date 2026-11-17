@@ -294,13 +294,15 @@ Ac değerleriyle uyumludur.</p>
   <li>Ms: Andrews (1965) doğrusal bağıntısı. Kalıntı östenit: Koistinen &amp; Marburger (1959).</li>
   <li>Tam martenzit sertliği: Hodge &amp; Orehoski (1946). Sertleşebilirlik: ASTM A255 (Grossmann D<sub>I</sub>), tane boyutu 7.</li>
 </ul>
-<h4>Çelik kütüphanesi</h4>
-<p>63 düşük alaşımlı çelik; bileşim aralıkları EN ISO 683-1/-2/-3/-17, EN 10025-2, EN 10083, EN 10085, EN 10089, EN 10132, ISO 4957,
-EN 10213 ve EN 10293 standartlarından, nominal değer aralık ortasıdır. P, S, B, Al, N, Nb, Ti modelde yoktur.</p>
+<h4>Çelik kütüphanesi ve alaşım aileleri</h4>
+<p>Karbon, düşük alaşımlı, sementasyon, yay, rulman, takım ve paslanmaz sınıflarında <b>546 çelik</b> (EN/ISO standartları ve iki açık Mendeley veri seti);
+EN, W.Nr., AISI/SAE, UNS, ASTM, JIS ve GOST normlarıyla aranabilir. Yakın alaşımlı çelikler <b>336 hesaplanmış alaşım ailesi kesitini</b> paylaşır;
+kendi kritik sıcaklıkları ailesinden 5 °C'den fazla sapan çelikler alt aileye ayrılır, kalanlarda sıcaklık ekseni çeliğin kendi CALPHAD değerlerine
+kaydırılır. Hesaplanan Ae1/Ae3 değerleri Cambridge MAP veri setindeki 746 dilatometri ölçümüyle (Gavard vd., 1996) doğrulanmıştır.</p>
 <h4>Sınırlar</h4>
 <ul>
   <li>Bütün diyagram değerleri <b>denge</b> değerleridir; gerçek ısıtma/soğutmada hıza bağlı sapma olur.</li>
-  <li>Paslanmaz ve yüksek alaşımlı takım çelikleri (sigma, Laves fazları) kapsam dışındadır.</li>
+  <li>N, Ti, Nb, Al, Co ve B henüz termodinamik modelde yoktur; bu elementleri içeren çeliklerde arayüz açık uyarı gösterir.</li>
   <li>Soğuma yapısı tahminleri kabadır; kesin sonuç için çeliğin CCT diyagramı ve üretici veri sayfası esastır.</li>
 </ul>
 <h4>Atıflar</h4>
@@ -309,9 +311,10 @@ EN 10213 ve EN 10293 standartlarından, nominal değer aralık ortasıdır. P, S
   <li>Fe–C değerlendirmesi — Fei &amp; Brosh (2014), <code>cfe_broshe.tdb</code>.</li>
   <li>Alaşımlı çelik kesitleri, E. Povoden-Karadeniz ve A. Jacob'un (TU Wien) MatCalc mc_fe v2.062 veritabanından üretilmiştir;
   bu veritabanı <b>Open Database License (ODbL)</b> ile yayımlanmıştır.</li>
+  <li>Doğrulama verisi — MAP_DATA_AUSTENMAT, L. Gavard, H.K.D.H. Bhadeshia, D.J.C. MacKay, S. Suzuki, <i>Mater. Sci. Technol.</i> 12 (1996) 453–463.</li>
 </ul>
 <div class="ozet">Faz Atlası eğitim ve ön tasarım içindir. Üretimde kullanılacak sıcaklıklar malzeme sertifikası ve üretici verisiyle doğrulanmalıdır.</div>
-<p class="not-satir">Faz Atlası v1.0 · 63 çelik, 52 hesaplanmış kesit · açık kaynak</p>`,
+<p class="not-satir">Faz Atlası v2.0 · 546 çelik, 336 alaşım ailesi kesiti · açık kaynak</p>`,
   },
 };
 

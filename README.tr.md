@@ -51,7 +51,7 @@ python -m http.server 8731 --directory web
 
 - **Hesap sunucusuyla (isteğe bağlı):** Sayfa bir FastAPI sunucusuyla da çalışır; o zaman tıklanan her noktanın faz oranları ve
   elle girilen bileşimin ısıl işlem rejimi anlık hesaplanır. Sunucu yoksa geri kalan her şey statik veri dosyalarından gelir.
-  Kurulum: [backend/README.md](backend/README.md).
+  Kurulum: [backend/README.tr.md](backend/README.tr.md).
 
 ## Güvenli mi?
 
@@ -159,7 +159,7 @@ KESIT_ISLEMCI=4 .venv/Scripts/python hesap/kesit_uret.py
 kullanır (63 çelik → 52 kesit). Yeni çelik eklemek için `hesap/celik_kutuphanesi.py`'ye bir satır ekleyip son iki komutu çalıştırman yeterli.
 
 546 çeliklik kütüphaneyi, 336 aile kesitini ve sayfanın okuduğu statik dosyaları backend üretir
-([backend/README.md](backend/README.md)); iki Mendeley veri seti `hesap/veri_kaynaklari/` klasörüne konur (bağlantılar *Atıflar*'da):
+([backend/README.tr.md](backend/README.tr.md)); iki Mendeley veri seti `hesap/veri_kaynaklari/` klasörüne konur (bağlantılar *Atıflar*'da):
 
 ```bash
 .venv/Scripts/python -m pip install -r backend/requirements.txt -r backend/requirements-api.txt
@@ -185,7 +185,7 @@ ve çelik dışı elementleri ayıklar.
 | `web/detay.js` | Isıl işlem modu: çelik kütüphanesi, alaşım, bantlar, soğuma |
 | `web/kesit.js` | Alaşımlı çelik kesitleri (gerçek hesap), seçilen çeliğe göre kaydırma |
 | `web/api.js` | Hesap sunucusu istemcisi; sunucu yoksa aynı istekler `web/veri/kutuphane` ve `web/veri/aile` dosyalarından karşılanır |
-| `backend/` | Çelik veritabanı, alaşım aileleri, kesit izleme, ısıl işlem rejimleri, doğrulama, FastAPI ([ayrıntılar](backend/README.md)) |
+| `backend/` | Çelik veritabanı, alaşım aileleri, kesit izleme, ısıl işlem rejimleri, doğrulama, FastAPI ([ayrıntılar](backend/README.tr.md)) |
 | `web/pin.js` | Sabitlenen noktalar ve bilgi kartı |
 | `web/bilgi.js`, `web/bilgi_en.js` | Bilgi (i) pencereleri (TR / EN), kart katlama |
 | `web/dil.js`, `web/dil_sec.js` | Dil sistemi: bütün arayüz metinleri (TR / EN), TR \| EN seçici |
