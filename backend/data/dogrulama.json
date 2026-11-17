@@ -1,0 +1,380 @@
+{
+ "kaynak": "MAP_DATA_AUSTENMAT — L. Gavard, H.K.D.H. Bhadeshia, D.J.C. MacKay, S. Suzuki, Mater. Sci. Technol. 12 (1996) 453-463",
+ "tarih": "2026-11-17T17:54:14",
+ "tdb_sha": "b0ea111a02a70431",
+ "aciklama": "fark = ölçülen Ac − hesaplanan Ae (°C). Ölçüm ısıtırken yapıldığından pozitif fark beklenir; yavaş ısıtmada fark dengeye en yakındır.",
+ "olcum": 746,
+ "okunamayan_satir": 43,
+ "bilesim": 716,
+ "hesaplanamayan": 13,
+ "hiz_araligi": {
+  "0-0.1 K/s": {
+   "Ae1": {
+    "n": 610,
+    "ortalama": 19.6,
+    "medyan": 16.0,
+    "sapma": 29.0,
+    "ortalama_mutlak": 25.5
+   },
+   "Ae3": {
+    "n": 709,
+    "ortalama": 31.7,
+    "medyan": 31.0,
+    "sapma": 24.1,
+    "ortalama_mutlak": 33.1
+   },
+   "Andrews1": {
+    "n": 711,
+    "ortalama": -8.3,
+    "medyan": -6.9,
+    "sapma": 28.1,
+    "ortalama_mutlak": 19.8
+   },
+   "Andrews3": {
+    "n": 711,
+    "ortalama": 22.3,
+    "medyan": 19.7,
+    "sapma": 37.5,
+    "ortalama_mutlak": 28.8
+   }
+  },
+  "1-10 K/s": {
+   "Ae1": {
+    "n": 18,
+    "ortalama": 45.4,
+    "medyan": 38.0,
+    "sapma": 35.8,
+    "ortalama_mutlak": 46.6
+   },
+   "Ae3": {
+    "n": 19,
+    "ortalama": 41.2,
+    "medyan": 30.0,
+    "sapma": 39.0,
+    "ortalama_mutlak": 43.1
+   },
+   "Andrews1": {
+    "n": 20,
+    "ortalama": 1.1,
+    "medyan": -34.0,
+    "sapma": 75.8,
+    "ortalama_mutlak": 65.5
+   },
+   "Andrews3": {
+    "n": 20,
+    "ortalama": 86.9,
+    "medyan": 102.5,
+    "sapma": 40.9,
+    "ortalama_mutlak": 86.9
+   }
+  },
+  "0.1-1 K/s": {
+   "Ae1": {
+    "n": 1,
+    "ortalama": -12.0,
+    "medyan": -12.0,
+    "sapma": 0.0,
+    "ortalama_mutlak": 12.0
+   },
+   "Ae3": {
+    "n": 1,
+    "ortalama": 78.0,
+    "medyan": 78.0,
+    "sapma": 0.0,
+    "ortalama_mutlak": 78.0
+   },
+   "Andrews1": {
+    "n": 1,
+    "ortalama": -6.7,
+    "medyan": -6.7,
+    "sapma": 0.0,
+    "ortalama_mutlak": 6.7
+   },
+   "Andrews3": {
+    "n": 1,
+    "ortalama": 69.7,
+    "medyan": 69.7,
+    "sapma": 0.0,
+    "ortalama_mutlak": 69.7
+   }
+  },
+  ">10 K/s": {
+   "Ae1": {
+    "n": 1,
+    "ortalama": 8.0,
+    "medyan": 8.0,
+    "sapma": 0.0,
+    "ortalama_mutlak": 8.0
+   },
+   "Ae3": {
+    "n": 1,
+    "ortalama": 98.0,
+    "medyan": 98.0,
+    "sapma": 0.0,
+    "ortalama_mutlak": 98.0
+   },
+   "Andrews1": {
+    "n": 1,
+    "ortalama": 13.3,
+    "medyan": 13.3,
+    "sapma": 0.0,
+    "ortalama_mutlak": 13.3
+   },
+   "Andrews3": {
+    "n": 1,
+    "ortalama": 89.7,
+    "medyan": 89.7,
+    "sapma": 0.0,
+    "ortalama_mutlak": 89.7
+   }
+  }
+ },
+ "yavas_esik_Ks": 1.0,
+ "sinif_yavas": {
+  "carbon_low_alloy": {
+   "Ae1": {
+    "n": 608,
+    "ortalama": 19.7,
+    "medyan": 16.0,
+    "sapma": 29.0,
+    "ortalama_mutlak": 25.5
+   },
+   "Ae3": {
+    "n": 708,
+    "ortalama": 31.9,
+    "medyan": 31.0,
+    "sapma": 24.1,
+    "ortalama_mutlak": 33.2
+   },
+   "Andrews1": {
+    "n": 708,
+    "ortalama": -6.5,
+    "medyan": -6.5,
+    "sapma": 24.7,
+    "ortalama_mutlak": 18.9
+   },
+   "Andrews3": {
+    "n": 708,
+    "ortalama": 21.0,
+    "medyan": 19.6,
+    "sapma": 34.5,
+    "ortalama_mutlak": 27.5
+   }
+  },
+  "martensitic_stainless": {
+   "Ae1": {
+    "n": 4,
+    "ortalama": 1.0,
+    "medyan": 0.5,
+    "sapma": 3.7,
+    "ortalama_mutlak": 3.5
+   },
+   "Ae3": {
+    "n": 3,
+    "ortalama": 2.7,
+    "medyan": -6.0,
+    "sapma": 12.3,
+    "ortalama_mutlak": 10.7
+   },
+   "Andrews1": {
+    "n": 5,
+    "ortalama": -174.8,
+    "medyan": -140.2,
+    "sapma": 67.2,
+    "ortalama_mutlak": 174.8
+   },
+   "Andrews3": {
+    "n": 5,
+    "ortalama": 190.2,
+    "medyan": 175.6,
+    "sapma": 23.9,
+    "ortalama_mutlak": 190.2
+   }
+  },
+  "ferritic_stainless": {
+   "Ae1": {
+    "n": 1,
+    "ortalama": -21.0,
+    "medyan": -21.0,
+    "sapma": 0.0,
+    "ortalama_mutlak": 21.0
+   },
+   "Ae3": {
+    "n": 1,
+    "ortalama": -26.0,
+    "medyan": -26.0,
+    "sapma": 0.0,
+    "ortalama_mutlak": 26.0
+   },
+   "Andrews1": {
+    "n": 1,
+    "ortalama": -134.7,
+    "medyan": -134.7,
+    "sapma": 0.0,
+    "ortalama_mutlak": 134.7
+   },
+   "Andrews3": {
+    "n": 1,
+    "ortalama": 135.6,
+    "medyan": 135.6,
+    "sapma": 0.0,
+    "ortalama_mutlak": 135.6
+   }
+  }
+ },
+ "en_kotu": [
+  {
+   "bil": {
+    "C": 0.08,
+    "Mn": 1.05,
+    "Ni": 2.0,
+    "Cr": 0.2,
+    "Mo": 0.75,
+    "V": 0.25
+   },
+   "hiz": 0.0417,
+   "Ac3": 986.0,
+   "Ae3": 809,
+   "fark3": 177.0
+  },
+  {
+   "bil": {
+    "C": 0.78,
+    "Si": 0.48,
+    "Mn": 1.61,
+    "S": 0.028,
+    "P": 0.014,
+    "Cu": 0.18,
+    "V": 0.16,
+    "Al": 0.018,
+    "N": 0.02
+   },
+   "hiz": 0.0417,
+   "Ac3": 865.0,
+   "Ae3": 723,
+   "fark3": 142.0
+  },
+  {
+   "bil": {
+    "C": 0.33,
+    "Si": 0.3,
+    "Mn": 0.38,
+    "Cr": 1.06,
+    "W": 1.01
+   },
+   "hiz": 0.0417,
+   "Ac3": 928.0,
+   "Ae3": 802,
+   "fark3": 126.0
+  },
+  {
+   "bil": {
+    "C": 0.34,
+    "Si": 1.37,
+    "Mn": 0.98,
+    "Ni": 1.82,
+    "Cr": 0.95,
+    "Mo": 0.42,
+    "V": 0.14
+   },
+   "hiz": 0.0417,
+   "Ac3": 880.0,
+   "Ae3": 763,
+   "fark3": 117.0
+  },
+  {
+   "bil": {
+    "C": 0.201,
+    "Si": 0.26,
+    "Mn": 1.55,
+    "S": 0.019,
+    "P": 0.025,
+    "Cr": 0.39,
+    "Nb": 0.11,
+    "Al": 0.005
+   },
+   "hiz": 0.0417,
+   "Ac3": 914.0,
+   "Ae3": 799,
+   "fark3": 115.0
+  },
+  {
+   "bil": {
+    "C": 0.95,
+    "Si": 0.26,
+    "Mn": 0.4,
+    "Ni": 2.95,
+    "Cr": 0.36,
+    "Mo": 0.08
+   },
+   "hiz": 0.0417,
+   "Ac3": 810.0,
+   "Ae3": 699,
+   "fark3": 111.0
+  },
+  {
+   "bil": {
+    "C": 0.46,
+    "Si": 1.4,
+    "Mn": 0.39,
+    "Ni": 0.3,
+    "Cr": 1.41,
+    "V": 0.1,
+    "B": 0.002
+   },
+   "hiz": 0.0417,
+   "Ac3": 906.0,
+   "Ae3": 796,
+   "fark3": 110.0
+  },
+  {
+   "bil": {
+    "C": 0.49,
+    "Si": 0.26,
+    "Mn": 0.78,
+    "S": 0.012,
+    "P": 0.018,
+    "Ni": 0.5,
+    "Cr": 1.04,
+    "Mo": 0.96,
+    "V": 0.09
+   },
+   "hiz": 0.0417,
+   "Ac3": 860.0,
+   "Ae3": 759,
+   "fark3": 101.0
+  },
+  {
+   "bil": {
+    "C": 0.41,
+    "Mn": 0.57,
+    "Cr": 1.57,
+    "Mo": 0.36,
+    "Al": 1.26
+   },
+   "hiz": 0.0417,
+   "Ac3": 870.0,
+   "Ae3": 770,
+   "fark3": 100.0
+  },
+  {
+   "bil": {
+    "C": 0.11,
+    "Si": 0.35,
+    "Mn": 0.53,
+    "S": 0.01,
+    "P": 0.015,
+    "Cu": 0.01,
+    "Ni": 0.04,
+    "Cr": 2.28,
+    "Mo": 1.0,
+    "V": 0.2,
+    "B": 0.03
+   },
+   "hiz": 0.0417,
+   "Ac3": 979.0,
+   "Ae3": 879,
+   "fark3": 100.0
+  }
+ ]
+}

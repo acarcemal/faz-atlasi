@@ -31,3 +31,6 @@ paylasim/
 
 # Faz 2.0 yerel veritabanı (backend/build_db.py ile kaynaklardan üretilir)
 backend/data/*.db
+
+# Doğrulama için indirilen ham ölçüm verisi (lisansı belirtilmemiş; depoda dağıtılmaz, sadece özet rapor)
+backend/data/dogrulama/
