@@ -1,7 +1,7 @@
 """
 Veritabanı şeması (SQLAlchemy 2). Aynı modeller SQLite ve PostgreSQL'de çalışır; JSON alanlar Postgres'te JSONB olur.
 
-Devir dokümanındaki şemadan farklar ve nedenleri:
+İlk plandaki (sabit norm sütunlu) şemadan farklar ve nedenleri:
   * Normlar (EN, W.Nr., AISI, UNS, JIS, GOST, ASTM ...) sabit sütunlar yerine `steel_designations` tablosunda.
     Böylece bir çeliğin istenen sayıda normu olur, yeni bir norm sistemi şema değişikliği gerektirmez ve
     arama tek indeksten yapılır. "Tek çelik / çoklu norm" kuralı: aynı çelik tek `steels` satırıdır.

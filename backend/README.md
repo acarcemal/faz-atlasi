@@ -1,7 +1,7 @@
 # Faz Atlası 2.0 — backend
 
 Çelik kütüphanesi (SQLite/PostgreSQL), alaşım aileleri, sınır izlemeli dikey kesitler ve tek nokta CALPHAD dengesi
-için FastAPI servisi. Mimari: kökteki `CLAUDE_GELISIM_VE_MIMARI_DEVIR.md`.
+için FastAPI servisi.
 
 ## Kurulum (yerel)
 
