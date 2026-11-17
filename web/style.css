@@ -22,6 +22,7 @@
   --ph-SG: #f0b46c;
   --ph-CHI: #b9a3d9;
   --ph-LAV: #9cc3e0;
+  --ph-CU: #dc9a72;
   --bolge-opak: 0.62;
   --bant-tavlama: #0e7490;
   --bant-normal: #be185d;
@@ -56,12 +57,10 @@
     --ph-K6: #6d66a0;
     --ph-MC: #36897c;
     --ph-M2C: #8f7a33;
-  --ph-SG: #a8631c;
-  --ph-CHI: #6f5a94;
-  --ph-LAV: #3f7396;
     --ph-SG: #a8631c;
     --ph-CHI: #6f5a94;
     --ph-LAV: #3f7396;
+    --ph-CU: #9a5a35;
     --bolge-opak: 0.7;
     /* koyu zeminde bantlar parlak tonlarla, odak modunda fazlar biraz daha görünür */
     --bant-tavlama: #38bdf8;
@@ -96,6 +95,10 @@
   --ph-K6: #6d66a0;
   --ph-MC: #36897c;
   --ph-M2C: #8f7a33;
+  --ph-SG: #a8631c;
+  --ph-CHI: #6f5a94;
+  --ph-LAV: #3f7396;
+  --ph-CU: #9a5a35;
   --bolge-opak: 0.7;
   /* koyu zeminde bantlar parlak tonlarla, odak modunda fazlar biraz daha görünür */
   --bant-tavlama: #38bdf8;

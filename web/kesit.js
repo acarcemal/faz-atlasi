@@ -40,14 +40,40 @@ Object.assign(FAZ, {
   SG:  { ad: t('faz.SG'), kisa: 'σ' },
   CHI: { ad: t('faz.CHI'), kisa: 'χ' },
   LAV: { ad: t('faz.LAV'), kisa: 'Laves' },
+  CU:  { ad: t('faz.CU'), kisa: 'ε-Cu' },
 });
 const KARBURLER = ['C', 'K7', 'K23', 'K6', 'MC', 'M2C'];
 const ELEMENT_AD = { Mn: 'Mn', Si: 'Si', Cr: 'Cr', Ni: 'Ni', Mo: 'Mo', V: 'V', W: 'W', Cu: 'Cu' };
 
-/** anahtar: kesit (alaşım) anahtarı · etiket: { ad: gösterilen çelik adı, C: çeliğin nominal karbonu } */
+/** Aile kesitini seçilen çeliğe uydurma. Sunucu, ailenin kritik sıcaklıklarını (çeliğin karbonunda) çeliğin
+    kendi CALPHAD değerleriyle eşler (api.js: UYUM); burada sıcaklık ekseni bu çiftlerden geçen parça parça doğrusal
+    bir eşlemeyle kaydırılır. Kesitin alt ve üst kenarı sabit kalır; sırası bozulan çift (iki geçişin yer
+    değiştirmesi) atlanır. Çeliğin karbonunda çizgiler çeliğin kendi değerine oturur, uzaklaştıkça yaklaşıktır.
+    Dönüş: { f: T_aile -> T_çelik, ciftler } ya da uyum yoksa null. */
+function sicaklikEsle(etiket, T0, T1) {
+  const u = UYUM.veri;
+  if (!u || u.hata || etiket.id == null || u.steel_id !== etiket.id || !u.pairs) return null;
+  const ic = u.pairs.filter((p) => p.family > T0 && p.family < T1 && p.steel > T0 && p.steel < T1)
+    .map((p) => [p.family, p.steel]).sort((a, b) => a[0] - b[0]);
+  const es = [[T0, T0]];
+  for (const p of ic) if (p[0] > es[es.length - 1][0] && p[1] > es[es.length - 1][1]) es.push(p);
+  es.push([T1, T1]);
+  const f = (T) => {
+    let i = 1;
+    while (i < es.length - 1 && es[i][0] < T) i++;
+    const [a, b] = [es[i - 1], es[i]];
+    return a[1] + (T - a[0]) * (b[1] - a[1]) / (b[0] - a[0]);
+  };
+  return { f, ciftler: u.pairs.filter((p) => p.delta !== 0) };
+}
+
+/** anahtar: kesit (alaşım) anahtarı · etiket: { ad: gösterilen çelik adı, C: çeliğin nominal karbonu,
+    id: sunucu çeliğinin kimliği, bilesim: çeliğin alaşım bileşimi (nokta hesabı için) } */
 function kesitKaynak(anahtar, etiket) {
   const K = KESITLER[anahtar], ad = etiket.ad;
-  const rows = K.rows, CG = K.C;
+  const CG = K.C;
+  const esle = K.api ? sicaklikEsle(etiket, K.rows[0].T, K.rows[K.rows.length - 1].T) : null;
+  const rows = esle ? K.rows.map((r) => ({ ...r, T: esle.f(r.T) })) : K.rows;
   const poly = poligonlar(rows);
   const sinir = { x: [0, CG[CG.length - 1]], y: [rows[0].T, rows[rows.length - 1].T] };
 
@@ -68,11 +94,13 @@ function kesitKaynak(anahtar, etiket) {
   }
 
   /** Sunucu kesitinde ızgara yok: oranlar o nokta için anlık CALPHAD hesabından (api.js). Sonuç gelene kadar
-      bölgenin fazları oransız döner (oran: null), gelince panel yeniden çizilir. */
+      bölgenin fazları oransız döner (oran: null), gelince panel yeniden çizilir. Kütüphane çeliğinde hesap
+      ailenin değil çeliğin kendi alaşımıyla yapılır. */
   function oranlarApi(w, T) {
     const r = bolgeBul(bolgelerK(T), w);
-    const s = apiNokta(K.bilesim, w, T);
-    if (!s || s.hata) return { r, fazlar: r.p.map((f) => ({ f, oran: null, w: null })), bekliyor: !s, hata: !!s };
+    const s = apiNokta(etiket.bilesim || K.bilesim, w, T);
+    if (!s || s.hata || s.yerel)
+      return { r, fazlar: r.p.map((f) => ({ f, oran: null, w: null })), bekliyor: !s, hata: !!(s && s.hata), yerel: !!(s && s.yerel) };
     const fazlar = Object.entries(s.phases).filter(([f]) => FAZ[f]).map(([f, o]) => ({ f, oran: o, w: s.carbon_in_phases[f] }));
     return { r, fazlar, ms: s.elapsed_ms, onbellek: s.cached };
   }
@@ -194,10 +222,26 @@ function kesitKaynak(anahtar, etiket) {
     el('text', { x: sola ? x - 8 : x + 8, y: M.t + 11, class: 'nominal-yazi', 'text-anchor': sola ? 'end' : 'start' }, g).textContent = `${ad} · ${fmtC(Cn)} C`;
   }
 
+  /** Kesitin bu çeliğe ne kadar uyduğu (sunucu çeliği). Eşiği aşan fark ya da yapı farkı uyarı olarak gösterilir. */
+  function uyumNotu() {
+    if (!K.api || etiket.id == null) return '';
+    const u = UYUM.id === etiket.id ? UYUM.veri : null;
+    if (!u) return `<div class="kucuk soluk" style="margin-top:6px">${t('uyum.bekliyor')}</div>`;
+    if (u.hata) return '';
+    const farklar = (esle ? esle.ciftler : []).map((p) => `${t('uyum.k.' + p.key)} ${p.delta > 0 ? '+' : '−'}${Math.abs(p.delta)} °C`).join(', ');
+    if (u.mismatch && u.mismatch.length)
+      return `<div class="uyari">${t('uyum.yapi', { gecis: u.mismatch.map((m) => t('uyum.k.' + m.key)).join(', ') })}</div>`;
+    if (!u.within)
+      return `<div class="uyari">${t('uyum.asim', { d: fmt(u.max_abs_delta, 0), esik: fmt(u.threshold, 0), farklar })}</div>`;
+    if (!farklar) return `<div class="kucuk soluk" style="margin-top:6px">${t('uyum.ayni')}</div>`;
+    return `<div class="kucuk soluk" style="margin-top:6px">${t('uyum.duzeltildi', { aile: esc(u.family_id), farklar })}</div>`;
+  }
+
   /* ---- panel ---- */
   function panel() {
     const { C: w, T } = st;
-    const { r, fazlar, bekliyor, hata, ms, onbellek } = oranlar(w, T);
+    const { r, fazlar, bekliyor, hata, ms, onbellek, yerel } = oranlar(w, T);
+    const oranYaz = (o) => (yerel ? '—' : fmtP(o));
     const regs = bolgelerK(T);
     const alas = Object.entries(K.bilesim).filter(([e]) => e !== 'C').map(([e, v]) => `${ELEMENT_AD[e] || e} ${yuzde(fmt(v, 2))}`).join(' · ')
       + (K.ignored && K.ignored.length ? ` (${t('api.hesapDisi', { el: K.ignored.join(', ') })})` : '');
@@ -206,13 +250,15 @@ function kesitKaynak(anahtar, etiket) {
       ${baslik(t('kart.nokta'), `${fmtC(w)} C · ${fmtT(T)}`)}
       <div class="buyuk">${kisaAd(r.p)}</div>
       <div class="kucuk soluk" style="margin-top:4px">${t('bolge.' + Math.min(n, 4))} · ${t('kesit.bolgeAciklama', { ad: esc(ad), alas })}</div>
-      <div style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap">${r.p.map(chip).join('')}</div>`;
+      <div style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap">${r.p.map(chip).join('')}</div>
+      ${uyumNotu()}`;
 
     const cubuk = fazlar.map((f) => `<div style="width:${(f.oran ?? 1 / fazlar.length) * 100}%;background:var(--ph-${f.f})"${f.oran == null ? ' class="bekliyor"' : ''}></div>`).join('');
     const satirlar = fazlar.map((f) => `
-      <div class="faz-satir"><span class="ad">${FAZ[f.f].ad}</span><span class="oran">${fmtP(f.oran)}</span>
+      <div class="faz-satir"><span class="ad">${FAZ[f.f].ad}</span><span class="oran">${oranYaz(f.oran)}</span>
       <span class="bilesim">${t('faz.karbon')}: <b>${f.w != null ? fmtC(f.w) : '—'}</b> C</span></div>`).join('');
     const oranNot = !K.api ? t('kesit.oranNot', { izgara: `5 °C × ${fmtC(0.03)} C` })
+      : yerel ? t('api.nokta.yerel')
       : hata ? t('api.nokta.hata')
         : bekliyor ? t('api.nokta.bekliyor')
           : t('api.nokta.not', { sure: onbellek ? t('api.onbellek') : fmt(ms, 0) + ' ms' });
@@ -240,7 +286,7 @@ function kesitKaynak(anahtar, etiket) {
     const Ta = k.ae1 ? Math.max(k.ae1 - 20, sinir.y[0]) : sinir.y[0];
     const alt = oranlar(w, Ta);
     $('kYapi').innerHTML = `${baslik(t('kart.yapi.kesit'), fmtT(Ta))}
-      ${alt.fazlar.map((f) => `<div class="faz-satir"><span class="ad">${FAZ[f.f].ad}</span><span class="oran">${fmtP(f.oran)}</span></div>`).join('')}
+      ${alt.fazlar.map((f) => `<div class="faz-satir"><span class="ad">${FAZ[f.f].ad}</span><span class="oran">${oranYaz(f.oran)}</span></div>`).join('')}
       <div class="kucuk soluk" style="margin-top:6px">${t('kesit.yapiNot')}</div>`;
   }
 
@@ -252,7 +298,8 @@ let kesitIstek = 0;
 async function kesitAc(anahtar, etiket) {
   if (!kesitVar(anahtar)) return false;
   if (KAYNAK.alt && KAYNAK.alt.anahtar === anahtar) {
-    if (KAYNAK.alt.etiket.ad !== etiket.ad || KAYNAK.alt.etiket.C !== etiket.C) {
+    const e = KAYNAK.alt.etiket;
+    if (e.ad !== etiket.ad || e.C !== etiket.C || e.id !== etiket.id) {
       KAYNAK.alt = kesitKaynak(anahtar, etiket);
       lejantYaz(); guncelle();
     }
@@ -275,6 +322,15 @@ async function kesitAc(anahtar, etiket) {
   lejantYaz();
   kaynakDegisti();
   return true;
+}
+/** Çelik–aile uyumu geldi (api.js): açık sunucu kesiti bu çeliğinse sıcaklık düzeltmesiyle yeniden kurulur. */
+function kesitUyumDegisti() {
+  const k = KAYNAK.alt;
+  if (k && k.K.api && k.etiket.id != null && k.etiket.id === UYUM.id) {
+    KAYNAK.alt = kesitKaynak(k.anahtar, k.etiket);
+    lejantYaz();
+  }
+  guncelle();
 }
 function kesitKapat() {
   kesitIstek++;            // yolda olan yüklemeyi geçersiz kıl

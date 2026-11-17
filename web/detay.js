@@ -438,10 +438,14 @@ function celikBilgiYaz() {
     const aralik = c.composition.map((x) => `${x.element} ${x.min == null ? fmt(x.nominal, 2)
       : (x.min > 0 ? fmt(x.min, 2) + '–' : '≤ ') + fmt(x.max, 2)}`).join(' · ');
     const kullanim = DIL === 'en' ? c.usage_en : c.usage_tr;
+    const eksik = c.missing_elements || [];
     k.innerHTML = `<b>${esc(c.standard_name)}</b> · ${esc(DIL === 'en' ? c.group_en : c.group)}
       ${adlar ? `<div class="soluk">${adlar}</div>` : ''}
       ${c.standard_code || kullanim ? `<div class="soluk">${esc([c.standard_code, kullanim].filter(Boolean).join(' · '))}</div>` : ''}
-      <div class="soluk">${t(c.composition.some((x) => x.min != null) ? 'celik.aralik' : 'api.bilesim', { aralik })}</div>`;
+      <div class="soluk">${t(c.composition.some((x) => x.min != null) ? 'celik.aralik' : 'api.bilesim', { aralik })}</div>
+      ${c.family_parent_id ? `<div class="soluk">${t('uyum.altAile', { ust: esc(c.family_parent_id) })}</div>` : ''}
+      ${guvenEtiketi(c.steel_class)}
+      ${eksik.length ? `<div class="uyari">${t('eksik.el', { el: eksik.join(', ') })}</div>` : ''}`;
     return;
   }
   const c = KUTUPHANE.find((x) => x.ad === st.celik.ad);
@@ -450,6 +454,16 @@ function celikBilgiYaz() {
   k.innerHTML = `<b>${c.ad}</b>${c.no !== '—' ? ' · ' + c.no : ''}${c.aisi !== '—' ? ' · AISI/SAE ' + c.aisi : ''} · ${grupAd(c)}
     <div class="soluk">${c.std} · ${kullanimAd(c)}</div>
     <div class="soluk">${t('celik.aralik', { aralik })}</div>`;
+}
+
+/** Çelik sınıfının ölçümle doğrulanma durumu (api.js: DOGRULAMA). 20 ölçümün altı sonuç için az sayılır. */
+function guvenEtiketi(sinif) {
+  if (!DOGRULAMA.veri) return '';
+  const d = DOGRULAMA.veri.sinif[sinif] && DOGRULAMA.veri.sinif[sinif].Ae3;
+  const metin = !d ? t('guven.yok')
+    : d.n < 20 ? t('guven.az', { n: d.n, fark: fmt(d.ortalama, 0) })
+      : t('guven.var', { n: d.n, fark: fmt(d.ortalama, 0), sapma: fmt(d.sapma, 0) });
+  return `<div class="soluk">${metin}</div>`;
 }
 
 function celikKaydet() {
@@ -479,16 +493,24 @@ function kayitliSil(adK) {
 
 /** Detay açık + bu alaşımın kesiti hesaplanmış + kutu işaretli ise gerçek hesaba geç */
 function kesitGuncelle() {
-  // sunucu çeliği: kesit, çeliğin alaşım ailesininki (yakın bileşimli çelikler aynı kesiti paylaşır)
+  // sunucu çeliği: kendi bileşiminin kesiti (veri/kesit, faz oranlı ızgara) varsa o; yoksa alaşım ailesininki
+  // (yakın bileşimli çelikler aynı kesiti paylaşır)
   const api = st.celik && st.celik.tur === 'api';
-  const anahtar = api ? (st.celik.kesit ? 'api:' + st.celik.aile : '') : alasAnahtari();
+  const kendi = alasAnahtari();
+  const anahtar = !api || kesitVar(kendi) ? kendi : st.celik.kesit ? 'api:' + st.celik.aile : '';
+  const aileKesiti = anahtar.startsWith('api:');
   const hazir = !!anahtar && kesitVar(anahtar);
   const ad = st.celik ? st.celik.ad : t('girilen.bilesim');
-  if (st.detay && hazir && $('gercekSec').checked) kesitAc(anahtar, { ad, C: st.celik ? st.celik.C : null });
+  // aile kesiti çeliğin kendi sıcaklıklarına göre düzeltilir, nokta oranları kendi alaşımıyla
+  const c = api && API_CELIK && API_CELIK.id === st.celik.id ? API_CELIK : null;
+  uyumIste(c && hazir && aileKesiti ? c.id : null);
+  const bilesim = c ? Object.fromEntries(c.composition.filter((x) => x.element !== 'C').map((x) => [x.element, x.nominal])) : null;
+  if (st.detay && hazir && $('gercekSec').checked)
+    kesitAc(anahtar, { ad, C: st.celik ? st.celik.C : null, id: c && aileKesiti ? c.id : null, bilesim: aileKesiti ? bilesim : null });
   else kesitKapat();
   const alasimli = ELEMENTLER.some((e) => st.alas[e.s] > 0);
   $('gercekNot').textContent = hazir
-    ? t(api ? 'api.kesitVar' : 'gercek.var', { ad: st.celik ? st.celik.ad : t('bu.bilesim') })
+    ? t(aileKesiti ? 'api.kesitVar' : 'gercek.var', { ad: st.celik ? st.celik.ad : t('bu.bilesim') })
     : st.celik && st.celik.tur !== 'kayitli'
       ? t('gercek.sirada', { ad: st.celik.ad })
       : alasimli ? t('gercek.yok') : t('gercek.ipucu');
