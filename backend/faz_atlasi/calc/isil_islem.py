@@ -52,7 +52,14 @@ class _Tarayici:
     def fazlar(self, T):
         T = round(T, 1)
         if T not in self.f:
-            r = self.ps.hesapla(self.bil, T)
+            # çözücü nadiren bir noktada sonuç bulamıyor; yarım derece yanındaki nokta aynı faz kümesini verir
+            for d in (0, 0.5, -0.5, 1.0):
+                try:
+                    r = self.ps.hesapla(self.bil, T + d)
+                    break
+                except RuntimeError:
+                    if d == 1.0:
+                        raise
             self.f[T] = set(r['phases'])
             self.yok_sayilan = r['ignored_elements']
         return self.f[T]

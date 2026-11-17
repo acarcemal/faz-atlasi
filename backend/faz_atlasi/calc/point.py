@@ -2,8 +2,8 @@
 Tek nokta denge hesabı + önbellek.
 
 Önbellek iki katmanlı: süreç içi LRU (en hızlı) ve isteğe bağlı kalıcı katman (calculation_cache tablosu).
-Anahtar: SHA256(bileşim [4 ondalık] + T [0,1 °C] + P + TDB özeti + faz listesi). TDB değişirse eski sonuçlar
-kendiliğinden geçersiz olur.
+Anahtar: SHA256(bileşim [4 ondalık] + T [0,1 °C] + P + TDB özeti + faz listesi + sonuç sürümü). TDB ya da faz
+kodlaması değişirse eski sonuçlar kendiliğinden geçersiz olur.
 """
 import hashlib
 import json
@@ -11,6 +11,10 @@ import time
 from collections import OrderedDict
 
 from .engine import HESAP_DISI, KUTLE, agirlik_to_mol, faz_bilesimi_agirlik, fazlar_icin, get_engine, sira
+
+
+# Faz kodlaması ya da sonuç biçimi değişince artırılır (2: ε-Cu artık östenit sayılmıyor)
+SONUC_SURUMU = 2
 
 
 class GecersizBilesim(ValueError):
@@ -42,8 +46,8 @@ def bilesim_duzenle(bilesim, destekli):
 
 
 def onbellek_anahtari(w, T, fazlar, tdb_ozet):
-    ham = json.dumps({'w': sorted(w.items()), 'T': round(T, 1), 'P': 1e5, 'tdb': tdb_ozet, 'f': fazlar},
-                     separators=(',', ':'))
+    ham = json.dumps({'w': sorted(w.items()), 'T': round(T, 1), 'P': 1e5, 'tdb': tdb_ozet, 'f': fazlar,
+                      'v': SONUC_SURUMU}, separators=(',', ':'))
     return hashlib.sha256(ham.encode()).hexdigest()
 
 
@@ -74,11 +78,19 @@ class PointService:
         return {**sonuc, 'ignored_elements': yok, 'cached': kaynak is not None, 'cache_layer': kaynak,
                 'elapsed_ms': round((time.perf_counter() - t0) * 1000, 1)}
 
+    # Varsayılan başlangıç ızgarası bazı noktalarda yakınsamıyor (ör. ASTM A441, 800 °C: Cu + çok az V); daha sık
+    # ızgarayla aynı nokta çözülüyor. Sadece varsayılan başarısız olunca denenir (yavaştır).
+    YEDEK_PDENS = (200, 1000)
+
     def _coz(self, w, T, fazlar):
         x = agirlik_to_mol(w)
         xa = {e: v for e, v in x.items() if e not in ('C', 'FE')}
         with self.engine.kilit:
             r = self.engine.coz_saglam(xa, [x['C']], T, fazlar)[0]
+            for pd in self.YEDEK_PDENS:
+                if r is not None:
+                    break
+                r = self.engine.coz_saglam(xa, [x['C']], T, fazlar, pd)[0]
         if r is None:
             raise RuntimeError('Denge çözümü bulunamadı')
         kodlar = sira(r)

@@ -32,7 +32,7 @@ TEMEL_FAZLAR = ['LIQUID', 'FCC_A1', 'BCC_A2', 'CEMENTITE', 'M7C3', 'M23C6', 'M6C
 # Faz kodları hesap/kesit_uret.py ile aynı (web arayüzü bu kodları tanıyor) + paslanmazlar için yeni kodlar
 KOD = {'BCC_A2': 'A', 'CEMENTITE': 'C', 'M7C3': 'K7', 'M23C6': 'K23', 'M6C': 'K6', 'HCP_A3': 'M2C',
        'LIQUID': 'L', 'SIGMA': 'SG', 'CHI_A12': 'CHI', 'LAVES_PHASE': 'LAV'}
-SIRA = ['L', 'G', 'A', 'C', 'K7', 'K23', 'K6', 'MC', 'M2C', 'SG', 'CHI', 'LAV']
+SIRA = ['L', 'G', 'A', 'C', 'K7', 'K23', 'K6', 'MC', 'M2C', 'SG', 'CHI', 'LAV', 'CU']
 
 
 def fazlar_icin(bilesim):
@@ -45,10 +45,17 @@ def fazlar_icin(bilesim):
     return f
 
 
-def faz_kodu(faz, x_ara):
-    """FCC_A1'in ikinci kompozisyon kümesi MC/MN karbonitrürüdür (VC, NbC, TiN): ara yer atomu oranı yüksek."""
+def faz_kodu(faz, X):
+    """
+    X: fazın mol kesirleri. FCC_A1'in ikinci kompozisyon kümeleri östenit değildir:
+      * MC/MN karbonitrür (VC, NbC, TiN): ara yer atomu oranı yüksek
+      * ε-Cu (bakır çökeltisi): Cu'lu çeliklerde düşük sıcaklıkta %98+ Cu'lu FCC. Östenit sayılırsa Ae1
+        bulunamıyor ve kesitte 550 °C'de "östenit" görünüyordu.
+    """
     if faz == 'FCC_A1':
-        return 'MC' if x_ara > 0.25 else 'G'
+        if X.get('C', 0) + X.get('N', 0) > 0.25:
+            return 'MC'
+        return 'CU' if X.get('CU', 0) > 0.5 else 'G'
     return KOD.get(faz, faz)
 
 
@@ -152,7 +159,7 @@ class Engine:
                 if not p or not np.isfinite(n) or n < 1e-5:
                     continue
                 xj = {c: float(X[c][i][j]) for c in bilesenler}
-                k = faz_kodu(str(p), xj.get('C', 0) + xj.get('N', 0))
+                k = faz_kodu(str(p), xj)
                 m = float(n) * sum(xj[c] * KUTLE[c] for c in bilesenler)
                 # aynı kodlu iki küme gelirse kütle ağırlıklı birleştir
                 eski = kutle.get(k, 0)
@@ -166,7 +173,12 @@ class Engine:
         return out
 
     def coz_saglam(self, xa, xCs, T_C, fazlar, pdens=None):
-        """Çözücünün nadiren sonuç vermediği noktalar karbon çok az kaydırılarak yeniden denenir."""
+        """
+        Çözücünün nadiren sonuç vermediği noktalar karbon çok az kaydırılarak yeniden denenir.
+        Cu'lu çeliklerde HCP_A3 (M2C) modeli östenit bölgesinde NaN verip bütün dengeyi çökertiyor (ör. %0,16 C,
+        %0,3 Cu, 850 °C; sıcaklık ya da ızgara değiştirmek işe yaramıyor). Orada M2C zaten kararlı değil: bu
+        noktalar HCP_A3 olmadan yeniden çözülür.
+        """
         out = self.coz(xa, xCs, T_C, fazlar, pdens)
         for i, r in enumerate(out):
             for d in (1e-5, -1e-5, 1e-4, -1e-4):
@@ -174,6 +186,11 @@ class Engine:
                     break
                 if xCs[i] + d > 0:
                     r = out[i] = self.coz(xa, [xCs[i] + d], T_C, fazlar, pdens)[0]
+        eksik = [i for i, r in enumerate(out) if r is None]
+        if eksik and 'CU' in xa and 'HCP_A3' in fazlar:
+            yedek = [f for f in fazlar if f != 'HCP_A3']
+            for i, r in zip(eksik, self.coz(xa, [xCs[i] for i in eksik], T_C, yedek, pdens)):
+                out[i] = r
         return out
 
 
