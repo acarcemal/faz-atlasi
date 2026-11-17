@@ -234,6 +234,7 @@ function alasKartiKur() {
         placeholder="${t('ara.ph')}" aria-label="${t('ara.aria')}">
       <div id="celikListe" class="celik-liste" role="listbox" hidden></div>
     </div>
+    <div id="celikUyari" class="banner-yigin" hidden></div>
     <div id="celikBilgi" class="celik-bilgi" hidden></div>
     <label class="gercek-sec" id="gercekKutu"><input type="checkbox" id="gercekSec" checked>
       <span><b>${t('gercek.baslik')}</b><br><span class="soluk" id="gercekNot"></span></span></label>
@@ -380,7 +381,10 @@ async function apiCelikSec(id, noktayaGit = true) {
   try { c = await apiIstek(`/api/v1/steels/${id}`); } catch (e) { bildir(t('api.hata'), 'hata', 8000); return; }
   const nom = Object.fromEntries(c.composition.map((x) => [x.element, x.nominal]));
   API_CELIK = c;
-  st.celik = { tur: 'api', id: c.id, ad: c.standard_name, C: nom.C ?? null, aile: c.alloy_family_id, kesit: c.isopleth_available };
+  // aynı çelik yeniden yüklenirken (dil değişimi, listeden tekrar seçim) kullanıcının seçtiği karbon geçerli kalır
+  const onceki = st.celik && st.celik.tur === 'api' && st.celik.id === c.id ? st.celik : null;
+  st.celik = { tur: 'api', id: c.id, ad: c.standard_name, C: nom.C ?? null, aile: c.alloy_family_id, kesit: c.isopleth_available,
+    karbonSecildi: !!(onceki && onceki.karbonSecildi) };
   for (const e of ELEMENTLER) st.alas[e.s] = nom[e.s] || 0;
   alasGirisleriniYaz();
   $('celikAra').value = c.standard_name;
@@ -424,6 +428,7 @@ function celikBirak() {
 /** Seçilen çeliğin künyesi ve standart aralıkları */
 function celikBilgiYaz() {
   const k = $('celikBilgi');
+  celikUyariYaz();
   if (!st.celik) { k.hidden = true; return; }
   k.hidden = false;
   if (st.celik.tur === 'kayitli') {
@@ -438,14 +443,13 @@ function celikBilgiYaz() {
     const aralik = c.composition.map((x) => `${x.element} ${x.min == null ? fmt(x.nominal, 2)
       : (x.min > 0 ? fmt(x.min, 2) + '–' : '≤ ') + fmt(x.max, 2)}`).join(' · ');
     const kullanim = DIL === 'en' ? c.usage_en : c.usage_tr;
-    const eksik = c.missing_elements || [];
+    // eksik Si/Mn uyarısı künyenin altından kartın üstündeki bantlara taşındı (celikUyariYaz)
     k.innerHTML = `<b>${esc(c.standard_name)}</b> · ${esc(DIL === 'en' ? c.group_en : c.group)}
       ${adlar ? `<div class="soluk">${adlar}</div>` : ''}
       ${c.standard_code || kullanim ? `<div class="soluk">${esc([c.standard_code, kullanim].filter(Boolean).join(' · '))}</div>` : ''}
       <div class="soluk">${t(c.composition.some((x) => x.min != null) ? 'celik.aralik' : 'api.bilesim', { aralik })}</div>
       ${c.family_parent_id ? `<div class="soluk">${t('uyum.altAile', { ust: esc(c.family_parent_id) })}</div>` : ''}
-      ${guvenEtiketi(c.steel_class)}
-      ${eksik.length ? `<div class="uyari">${t('eksik.el', { el: eksik.join(', ') })}</div>` : ''}`;
+      ${guvenEtiketi(c.steel_class)}`;
     return;
   }
   const c = KUTUPHANE.find((x) => x.ad === st.celik.ad);
@@ -454,6 +458,80 @@ function celikBilgiYaz() {
   k.innerHTML = `<b>${c.ad}</b>${c.no !== '—' ? ' · ' + c.no : ''}${c.aisi !== '—' ? ' · AISI/SAE ' + c.aisi : ''} · ${grupAd(c)}
     <div class="soluk">${c.std} · ${kullanimAd(c)}</div>
     <div class="soluk">${t('celik.aralik', { aralik })}</div>`;
+}
+
+/* ---------- bilimsel dürüstlük bantları ----------
+   Çelik kartının üstünde (celikUyariYaz), seçilen sunucu çeliği için:
+     ⚠️ rejim hesaplanamadı: CALPHAD çözücüsü yakınsamadı (sunucu 5xx/422, sunucusuz veride rejim boş) ya da
+        kaynakta karbon yok — gösterilen değerler sadece yaklaşık model;
+     ℹ️ modele girmeyen elementler (rejim.ignored_elements; P, S, As gibi iz safsızlıklar hariç: karbür/nitrür
+        yapmazlar ve hemen her çelikte vardır);
+     ℹ️ kaynakta verilmemiş Si/Mn (missing_elements).
+   Diyagram kartının üstünde (kesitNotuYaz): çelik ailesinin kesitinden uyum sınırından (sapma.ESIK) fazla sapıyor,
+   kendi (alt aile) kesiti yok ve sıcaklık ekseni çeliğin kendi değerlerine kaydırıldı. */
+const IZ_SAFSIZLIK = new Set(['P', 'S', 'As']);
+function bant(tur, ikon, metin, ayrinti) {
+  return `<div class="banner banner-${tur}" role="note"><span class="banner-ikon" aria-hidden="true">${ikon}</span>
+    <div class="banner-metin">${metin}${ayrinti ? `<div class="banner-ayrinti">${ayrinti}</div>` : ''}</div></div>`;
+}
+/** Bantları kutuya yazar; içerik aynıysa DOM'a dokunmaz (panel her karede yeniden çizilir) */
+function bantYaz(kutu, parcalar) {
+  const html = parcalar.join('');
+  if (!kutu || kutu.dataset.html === html) return;
+  kutu.dataset.html = html;
+  kutu.innerHTML = html;
+  kutu.hidden = !html;
+}
+const rejimBuCelik = () => !!(st.celik && st.celik.tur === 'api' && REJIM.anahtar === JSON.stringify({ id: st.celik.id }));
+/** Çeliğin modele girmeyen elementleri: rejim hesabından; rejim yoksa (hesaplanamadı / bekleniyor) bileşimden */
+let MODEL_DISI_YEREL = null;
+function modelDisiElementler(c) {
+  const r = rejimBuCelik() ? REJIM.veri : null;
+  let l = r && Array.isArray(r.ignored_elements) ? r.ignored_elements : null;
+  if (!l) {
+    let disarida = null;
+    if (API.elementler) {
+      const var_ = new Set(API.elementler.map((e) => e.toUpperCase()));
+      disarida = (e) => !var_.has(e.toUpperCase());
+    } else if (API.yerel) {
+      // sunucusuz: modelin dışındaki elementler TDB'ye bağlıdır, çelikten bağımsız; kütüphanedeki rejimlerden toplanır
+      if (!MODEL_DISI_YEREL) {
+        MODEL_DISI_YEREL = new Set();
+        for (const x of YERELVERI.celik.values()) for (const e of (x.rejim && x.rejim.ignored_elements) || []) MODEL_DISI_YEREL.add(e);
+      }
+      disarida = (e) => MODEL_DISI_YEREL.has(e);
+    }
+    l = disarida ? c.composition.filter((x) => x.element !== 'C' && x.nominal > 0 && disarida(x.element)).map((x) => x.element) : [];
+  }
+  return l.filter((e) => !IZ_SAFSIZLIK.has(e));
+}
+function celikUyariYaz() {
+  const kutu = $('celikUyari');
+  const c = st.celik && st.celik.tur === 'api' && API_CELIK && API_CELIK.id === st.celik.id ? API_CELIK : null;
+  const parca = [];
+  if (c) {
+    if (st.celik.C == null) parca.push(bant('uyari', '⚠️', t('banner.karbonYok')));
+    else if (rejimBuCelik() && REJIM.veri && REJIM.veri.hesaplanamadi) parca.push(bant('uyari', '⚠️', t('banner.cozucu')));
+    const disari = modelDisiElementler(c);
+    if (disari.length) parca.push(bant('bilgi', 'ℹ️', t('banner.modelDisi', { el: disari.join(', ') })));
+    const eksik = c.missing_elements || [];
+    if (eksik.length) parca.push(bant('bilgi', 'ℹ️', t('eksik.el', { el: eksik.join(', ') })));
+  }
+  bantYaz(kutu, parca);
+}
+function kesitNotuYaz() {
+  const a = KAYNAK.alt;
+  const u = a && a.K.api && a.etiket.id != null && UYUM.id === a.etiket.id ? UYUM.veri : null;
+  const parca = [];
+  // yapı farkı (bir geçiş birinde var ötekinde yok) "hafif sapma" değil: kesit.js'teki uyarı kalır
+  if (u && !u.hata && u.within === false && !(u.mismatch && u.mismatch.length) && a.esle) {
+    // bölünmez boşluk: dar ekranda "+6" ile "°C" ayrı satırlara düşmesin
+    const farklar = a.esle.ciftler.map((p) => `${t('uyum.k.' + p.key)} ${p.delta > 0 ? '+' : '−'}${Math.abs(p.delta)} °C`).join(', ');
+    const ae = a.esle.ciftler.some((p) => p.key === 'Ae1' || p.key === 'Ae3');
+    parca.push(bant('bilgi', 'ℹ️', t(ae ? 'banner.sapma' : 'banner.sapma.genel'),
+      t('banner.sapma.ayrinti', { d: fmt(u.max_abs_delta, 0), esik: fmt(u.threshold, 0), farklar })));
+  }
+  bantYaz($('kesitNot'), parca);
 }
 
 /** Çelik sınıfının ölçümle doğrulanma durumu (api.js: DOGRULAMA). 20 ölçümün altı sonuç için az sayılır. */
@@ -516,6 +594,22 @@ function kesitGuncelle() {
       : alasimli ? t('gercek.yok') : t('gercek.ipucu');
 }
 
+/* Kaynakta karbonu olmayan sunucu çeliği: seçili nokta önceki çelikten kalmıştır, o karbonla hesap yanıltır.
+   Kullanıcı karbonu kendisi seçene kadar (C kutusu, kaydırıcı, diyagramda tık/sürükleme, ok tuşları) ısıl işlem ve
+   soğuma değerleri verilmez; seçince değerler o karbon için, notla gösterilir. Değer karşılaştırması yerine olay
+   dinlenir: kesit açılınca nokta yeni sınırlara kırpılabilir, bu bir seçim sayılmamalı. */
+const karbonsuzCelik = () => !!(st.celik && st.celik.tur === 'api' && st.celik.C == null);
+const karbonBekleniyor = () => karbonsuzCelik() && !st.celik.karbonSecildi;
+function karbonSecildi() {
+  if (!karbonBekleniyor()) return;
+  st.celik.karbonSecildi = true;
+  guncelle();
+}
+inC.addEventListener('input', karbonSecildi);
+slC.addEventListener('input', karbonSecildi);
+svg.addEventListener('pointerdown', (e) => { if (e.button === 0 && !e.shiftKey) karbonSecildi(); });
+svg.addEventListener('keydown', (e) => { if (e.key.startsWith('Arrow')) karbonSecildi(); });
+
 /** Isıl işlem rejimi sunucudan: kütüphane çeliğinde sınıfı belli; elle girilende Cr ≥ %10,5 ise sorulur
     (paslanmaz olabilir). Elle girilen bileşimde karbon değiştikçe istek, imleç durduktan sonra gider. */
 let rejimZaman = 0;
@@ -572,8 +666,9 @@ function katmanGuncelle() {
   });
   $('empNot').hidden = alasimli;
   if (!st.detay) return;
-  const r = islemAraliklari(st.C);
-  const html = `<span>${t('bantlar.lejant', { C: fmtC(st.C) })}:</span>` + BANTLAR.filter((b) => st.bant[b.k]).map((b) =>
+  const bekle = karbonBekleniyor();
+  const r = bekle ? ISLEM_YOK : islemAraliklari(st.C);
+  const html = `<span>${bekle ? t('bantlar.lejant.karbonYok') : t('bantlar.lejant', { C: fmtC(st.C) })}:</span>` + BANTLAR.filter((b) => st.bant[b.k]).map((b) =>
     `<span class="bant-chip" data-bant-lejant="${b.k}"><i style="background:${b.renk}"></i>${b.ad} <b>${r[b.k] ? fmt(r[b.k][0], 0) + '–' + fmt(r[b.k][1], 0) + ' °C' : '—'}</b></span>`).join('');
   if (html !== sonBantLejant) { $('bantLejant').innerHTML = html; sonBantLejant = html; }
 }
@@ -629,13 +724,22 @@ KANCA.panel.push(() => {
   for (const id of ['kAlas', 'kIslem', 'kSogu']) $(id).hidden = !acik;
   rejimGuncelle();
   katmanGuncelle();
+  kesitNotuYaz();
   if (!acik) return;
+  celikUyariYaz();   // rejim sonucu (çözücü hatası, hesaba girmeyen elementler) gelince güncellenir
   if (donusumsuzRejim()) { rejimKartlari(REJIM.veri); return; }
   if (REJIM.bekliyor && (st.celik?.tur === 'api' || st.alas.Cr >= 10.5)) {
     $('kIslem').innerHTML = `${baslik(t('kart.islem'), '')}<div class="kucuk soluk"><span class="donen kucuk-donen"></span> ${t('rejim.bekliyor')}</div>`;
     $('kSogu').innerHTML = `${baslik(t('kart.sogu'), '')}<div class="kucuk soluk">${t('rejim.bekliyor')}</div>`;
     return;
   }
+  if (karbonBekleniyor()) {
+    $('kIslem').innerHTML = `${baslik(t('kart.islem'), '')}<div class="uyari" style="margin-top:0">${t('karbon.bekle')}</div>`;
+    $('kSogu').innerHTML = `${baslik(t('kart.sogu'), '')}<div class="kucuk soluk">${t('karbon.bekle.sogu')}</div>`;
+    return;
+  }
+  // karbonsuz çelikte kullanıcı karbonu seçti: değerlerin hangi karbon için olduğu açıkça yazılır
+  const karbonNotu = karbonsuzCelik() ? `<div class="uyari" style="margin:0 0 10px">${t('karbon.secilen', { C: fmtC(st.C) })}</div>` : '';
   const w = st.C, m = model(), a = st.alas;
   const k = kritik(w, m), gercek = k.kaynak === 'hesap';
   const hipo = k.hipo;
@@ -668,6 +772,7 @@ KANCA.panel.push(() => {
       <td class="sag"><b>${aralik(r[b.k])}</b></td></tr>`;
   $('kIslem').innerHTML = `
     ${baslik(t('kart.islem'), `${fmtC(w)} C · ${t(gercek ? 'kaynak.hesap' : m.alasimli ? 'kaynak.empirik' : 'kaynak.ikili')}`)}
+    ${karbonNotu}
     ${gercek ? `<div class="kritik-ust">
       ${kare('Ae1', k.ae1Alt ? '< 550 °C' : T0(k.ae1), t('gk.Ae1.k'))}
       ${kare(hipo ? 'Ae3' : t('kare.A1ustu'), T0(k.ae3), t('gk.Ae3.k'))}
@@ -716,7 +821,8 @@ KANCA.panel.push(() => {
       <tr><td>${t('sogu.hrc')}</td><td class="sag">${hrc ? '≈ ' + fmt(hrc, 0) + ' HRC' : '≈ 64–66 HRC'}</td></tr>
       <tr><td>${t('sogu.DI')}</td><td class="sag">${fmt(DI, 0)} mm · ${sertlesebilirlik}</td></tr>
     </table>
-    <div class="kucuk soluk" style="margin-top:6px">${t('sogu.not', { cizgi: hipo ? 'A3' : 'A1' })}</div>`;
+    <div class="kucuk soluk" style="margin-top:6px">${t('sogu.not', { cizgi: hipo ? 'A3' : 'A1' })}</div>
+    ${karbonsuzCelik() ? `<div class="kucuk soluk" style="margin-top:6px">${t('karbon.secilen', { C: fmtC(w) })}</div>` : ''}`;
 });
 
 function sogumaYapisi(w, m, DI, fM, k) {

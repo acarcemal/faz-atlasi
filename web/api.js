@@ -26,7 +26,8 @@ async function apiIstek(yol, govde, sure = 30000) {
     const r = await fetch(API.taban + yol, govde
       ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(govde), signal: kontrol.signal }
       : { signal: kontrol.signal });
-    if (!r.ok) throw new Error(`${r.status} ${yol}`);
+    // durum: sunucu yanıt verdi ama hesap yapılamadı (5xx, 422) ile ağ hatasını ayırmak için
+    if (!r.ok) throw Object.assign(new Error(`${r.status} ${yol}`), { durum: r.status });
     return await r.json();
   } finally {
     clearTimeout(zaman);
@@ -143,7 +144,11 @@ async function yerelIstek(yol, govde) {
     if (!c) throw new Error('404 ' + yol);
     if (!m[2]) return yerelCelik(c);
     if (m[2] === '/family-fit' && c.uyum) return { steel_id: c.id, family_id: c.aile, parent_family_id: c.ust, ...c.uyum };
-    if (m[2] === '/heat-treatment' && c.rejim) return { steel_id: c.id, standard_name: c.ad, ...c.rejim };
+    if (m[2] === '/heat-treatment') {
+      if (c.rejim) return { steel_id: c.id, standard_name: c.ad, ...c.rejim };
+      // export_static.py rejimi hesaplanamayan çeliği (çözücü yakınsamadı / karbon yok) boş bırakır
+      throw Object.assign(new Error('rejim hesaplanamadı: ' + yol), { durum: 500 });
+    }
     throw new Error('yerelde yok: ' + yol);
   }
   if ((m = p.match(/^\/api\/v1\/isopleth\/(.+)$/))) return yerelAile(decodeURIComponent(m[1]));
@@ -195,7 +200,8 @@ function rejimIste(kaynak) {
     ? apiIstek(`/api/v1/steels/${kaynak.id}/heat-treatment`, null, 90000)
     : apiIstek('/api/v1/heat-treatment', { composition: kaynak.bilesim }, 90000);
   istek.then((r) => { if (REJIM.anahtar === anahtar) REJIM.veri = r; })
-    .catch(() => { if (REJIM.anahtar === anahtar) REJIM.veri = { hata: true }; })
+    // hesaplanamadi: hesap sunucuda denendi ve başarısız oldu (ağ hatası / zaman aşımı değil)
+    .catch((e) => { if (REJIM.anahtar === anahtar) REJIM.veri = { hata: true, hesaplanamadi: e.durum >= 500 || e.durum === 422 }; })
     .finally(() => { if (REJIM.anahtar === anahtar) { REJIM.bekliyor = false; guncelle(); } });
 }
 /** A1/A3 dönüşümü olmayan rejim aktif mi (östenitik, dupleks, ferritik paslanmaz...) */

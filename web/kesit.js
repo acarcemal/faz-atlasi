@@ -231,6 +231,8 @@ function kesitKaynak(anahtar, etiket) {
     const farklar = (esle ? esle.ciftler : []).map((p) => `${t('uyum.k.' + p.key)} ${p.delta > 0 ? '+' : '−'}${Math.abs(p.delta)} °C`).join(', ');
     if (u.mismatch && u.mismatch.length)
       return `<div class="uyari">${t('uyum.yapi', { gecis: u.mismatch.map((m) => t('uyum.k.' + m.key)).join(', ') })}</div>`;
+    // sıcaklık ekseni düzeltildiyse sınır aşımı diyagram kartının üstündeki bantta (detay.js: kesitNotuYaz)
+    if (!u.within && esle) return '';
     if (!u.within)
       return `<div class="uyari">${t('uyum.asim', { d: fmt(u.max_abs_delta, 0), esik: fmt(u.threshold, 0), farklar })}</div>`;
     if (!farklar) return `<div class="kucuk soluk" style="margin-top:6px">${t('uyum.ayni')}</div>`;
@@ -290,7 +292,7 @@ function kesitKaynak(anahtar, etiket) {
       <div class="kucuk soluk" style="margin-top:6px">${t('kesit.yapiNot')}</div>`;
   }
 
-  return { ad, anahtar, etiket, poly, sinir, bolgeler: bolgelerK, oranlar, gecisler: gecislerK, kritik, ciz, panel, K };
+  return { ad, anahtar, etiket, poly, sinir, bolgeler: bolgelerK, oranlar, gecisler: gecislerK, kritik, ciz, panel, K, esle };
 }
 
 /** Kesiti (gerekirse dosyadan yükleyip) aç. Aynı alaşım açıksa sadece etiketi günceller. */

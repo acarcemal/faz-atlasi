@@ -86,11 +86,43 @@ def kod(faz, xC):
 SIRA = ['L', 'G', 'A', 'C', 'K7', 'K23', 'K6', 'MC', 'M2C']
 
 
+_hazir = {}
+
+
+def hazir(elems):
+    """Aynı alaşım için faz modelleri ve derlenmiş enerji fonksiyonları bir kez kurulur.
+    equilibrium() bunları her çağrıda baştan kuruyordu; satır süresinin ~%75'i buydu."""
+    if tuple(elems) not in _hazir:
+        from pycalphad import variables as v
+        from pycalphad.core.utils import instantiate_models, unpack_species
+        from pycalphad.codegen.phase_record_factory import PhaseRecordFactory
+        comps = ['FE', 'VA'] + elems
+        models = instantiate_models(db(), comps, FAZLAR)
+        prf = PhaseRecordFactory(db(), sorted(unpack_species(db(), comps)), [v.N, v.P, v.T], models)
+        _hazir[tuple(elems)] = (models, prf)
+    return _hazir[tuple(elems)]
+
+
 def hesap(elems, xa, ws, T):
+    """Noktalardaki fazlar; çözücünün sonuç bulamadığı noktalar (çok fazlı bölgelerde ~%0,05)
+    karbon çok az kaydırılarak yeniden denenir"""
+    out = _hesap(elems, xa, ws, T)
+    for i, f in enumerate(out):
+        for d in (1e-4, -1e-4, 1e-3, -1e-3):
+            if f is not None:
+                break
+            if ws[i] + d > 0:
+                f = out[i] = _hesap(elems, xa, [ws[i] + d], T)[0]
+    return out
+
+
+def _hesap(elems, xa, ws, T):
     from pycalphad import equilibrium, variables as v
     xs = [wC_to_xC(w, xa) for w in ws]
+    models, prf = hazir(elems)
     eq = equilibrium(db(), ['FE', 'VA'] + elems, FAZLAR,
-                     {**{v.X(e): x for e, x in xa.items()}, v.X('C'): xs, v.T: T + 273.15, v.P: 1e5})
+                     {**{v.X(e): x for e, x in xa.items()}, v.X('C'): xs, v.T: T + 273.15, v.P: 1e5, v.N: 1},
+                     model=models, phase_records=prf)
     # diğer koşul boyutları 1 uzunlukta; (nokta, vertex) şekline düzleştir
     nv = eq.Phase.shape[-1]
     ph = eq.Phase.values.reshape(-1, nv)

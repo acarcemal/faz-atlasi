@@ -195,6 +195,12 @@ sozlukEkle({
   'bant.gerilim': ['Gerilim giderme', 'Stress relieving'],
   'bant.gerilim.a': ['550–650 °C (A1\'in en az 20 °C altı, faz dönüşümü yok)', '550–650 °C (at least 20 °C below A1, no phase change)'],
   'bantlar.lejant': ['Bantlar ({C} C için)', 'Windows (for {C} C)'],
+  'bantlar.lejant.karbonYok': ['Bantlar (karbon seçilince)', 'Windows (once a carbon is picked)'],
+  // kaynakta karbonu olmayan çelik (detay.js: karbonBekleniyor)
+  'karbon.bekle': ['Bu çeliğin kaynak verisinde karbon yok; ısıl işlem sıcaklıkları karbona bağlı olduğu için kendiliğinden verilemiyor. Kendi analizindeki karbonu üstteki C kutusuna gir ya da diyagramda bir nokta seç; değerler o karbon için hesaplanır.',
+    'The source data gives no carbon content for this steel, and heat-treatment temperatures depend on carbon, so none can be given yet. Enter the carbon from your own analysis in the C field above or pick a point on the diagram; values are then calculated for that carbon.'],
+  'karbon.bekle.sogu': ['Ms, sertlik ve sertleşebilirlik de karbona bağlı: önce karbonu seç.', 'Ms, hardness and hardenability also depend on carbon: pick a carbon first.'],
+  'karbon.secilen': ['Kaynakta karbon yok: değerler senin seçtiğin {C} C için.', 'No carbon in the source: values are for the {C} C you picked.'],
 
   'ortam.firin': ['Fırında (tavlama)', 'Furnace cool (annealing)'],
   'ortam.hava': ['Havada (normalizasyon)', 'Air cool (normalizing)'],
@@ -383,6 +389,20 @@ sozlukEkle({
     'This steel class has not been validated against measurements; values are the model\'s (MatCalc mc_fe) equilibrium estimate.'],
   'eksik.el': ['Kaynakta {el} verilmemiş; hesapta 0 kabul edildi. Gerçek dökümde varsa kritik sıcaklıklar birkaç derece ile ~15 °C arası kayabilir; kendi analizini alaşım kutularına girerek hesaplatabilirsin.',
     '{el} is not given in the source and is taken as 0. If the actual heat contains it, critical temperatures can shift by a few to ~15 °C; enter your own analysis in the alloy fields to recalculate.'],
+  // bilimsel dürüstlük bantları (detay.js: celikUyariYaz, kesitNotuYaz)
+  'banner.cozucu': ['Bu çeliğin yüksek alaşım karmaşıklığı nedeniyle termodinamik denge çözücüsü tam yakınsamamıştır. Değerler kılavuz amaçlıdır; kritik ısıl işlem için malzeme sertifikası ve tedarikçi verilerine başvurunuz.',
+    'The thermodynamic equilibrium solver did not fully converge for this steel because of its high alloy complexity. Values are for guidance only; for critical heat treatment, consult the material certificate and supplier data.'],
+  'banner.karbonYok': ['Bu çeliğin kaynak verisinde karbon tanımlı olmadığı için termodinamik denge hesabı yapılamamıştır. Değerler kılavuz amaçlıdır; kritik ısıl işlem için malzeme sertifikası ve tedarikçi verilerine başvurunuz.',
+    'The source data gives no carbon content for this steel, so the thermodynamic equilibrium calculation could not be run. Values are for guidance only; for critical heat treatment, consult the material certificate and supplier data.'],
+  'banner.modelDisi': ['Bu çelik model dışı elementler ({el}) içermektedir. Gösterilen faz sınırları bu elementlerin karbür/nitrür etkisini içermez; ön tasarım amaçlıdır.',
+    'This steel contains elements outside the model ({el}). The phase boundaries shown do not include their carbide/nitride effects; for preliminary design only.'],
+  'banner.sapma': ['Bu çelik alaşım ailesinden hafif sapma göstermektedir; sıcaklık ekseni çeliğin kendi Ae1/Ae3 değerlerine göre kalibre edilmiştir.',
+    'This steel deviates slightly from its alloy family; the temperature axis has been calibrated to the steel\'s own Ae1/Ae3 values.'],
+  // kaydırılan çiftlerde Ae1/Ae3 yoksa (ör. dupleks: σ ve karbür çözünme)
+  'banner.sapma.genel': ['Bu çelik alaşım ailesinden hafif sapma göstermektedir; sıcaklık ekseni çeliğin kendi kritik sıcaklıklarına göre kalibre edilmiştir.',
+    'This steel deviates slightly from its alloy family; the temperature axis has been calibrated to the steel\'s own critical temperatures.'],
+  'banner.sapma.ayrinti': ['En büyük fark {d} °C (aile uyum sınırı {esik} °C): {farklar}. Bölge şekilleri, bu çeliğin kendi kesiti hesaplanana kadar ailenin kesitinden gelir.',
+    'Largest difference {d} °C (family fit limit {esik} °C): {farklar}. Field shapes come from the family isopleth until this steel\'s own isopleth is calculated.'],
   'norm.EN': ['EN', 'EN'], 'norm.WNR': ['W.Nr.', 'W.Nr.'], 'norm.AISI': ['AISI/SAE', 'AISI/SAE'], 'norm.UNS': ['UNS', 'UNS'],
   'norm.ASTM': ['ASTM', 'ASTM'], 'norm.ACI': ['ACI', 'ACI'], 'norm.JIS': ['JIS', 'JIS'], 'norm.GOST': ['GOST', 'GOST'],
   'norm.BS': ['BS', 'BS'], 'norm.TRADE': ['Ticari ad', 'Trade name'],

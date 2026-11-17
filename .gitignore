@@ -27,6 +27,11 @@ desktop.ini
 # Geçici test / görsel sayfaları
 web/_*.html
 
+# Bu bilgisayara özgü yardımcılar: kesit hesabını çökünce yeniden başlatan döngü,
+# kesit_uret.py değişikliklerini kayıtlı kesitlerle karşılaştıran regresyon denemesi
+backend/kesit_dongu.ps1
+hesap/kesit_test.py
+
 # Sosyal medya paylaşım dosyaları (karusel PDF vb.)
 paylasim/
 
