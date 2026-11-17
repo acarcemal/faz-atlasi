@@ -135,6 +135,20 @@ def test_api_tek_nokta(istemci):
     assert istemci.post('/api/v1/equilibrium/point', json={'composition': {'Cr': 1}, 'T': 700}).status_code == 422
 
 
+def test_api_celik_aile_uyumu(istemci):
+    c = istemci.get('/api/v1/steels', params={'q': '50CrMo4'}).json()['items'][0]
+    u = istemci.get(f'/api/v1/steels/{c["id"]}/family-fit').json()
+    assert u['family_id'] == c['alloy_family_id'] and u['threshold'] == 5
+    assert u['within'] and {p['key'] for p in u['pairs']} >= {'Ae1', 'Ae3'}
+    assert all(p['delta'] == p['steel'] - p['family'] for p in u['pairs'])
+
+
+def test_ecu_ostenit_sayilmaz(nokta):
+    # Cu'lu çelikte düşük sıcaklıktaki %98 Cu'lu FCC çökeltisi östenit (G) değil ε-Cu (CU)
+    r = nokta.hesapla({'C': 0.15, 'Mn': 0.9, 'Cu': 0.2}, 450)
+    assert 'G' not in r['phases'] and 'CU' in r['phases']
+
+
 def test_api_aile_ve_kesit(istemci):
     f = istemci.get('/api/v1/families/Mn0.75_Si0.25_Cr1.05_Mo0.225').json()
     assert f['steel_count'] >= 4

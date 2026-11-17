@@ -48,14 +48,17 @@ class SteelDetail(BaseModel):
     usage_en: str | None
     composition: list[CompositionOut]
     alloy_family_id: str | None
+    family_parent_id: str | None = None   # alt ailedeyse ayrıldığı aile
     isopleth_available: bool
     sources: list[str]
+    missing_elements: list[str] = []      # kaynakta verilmemiş, hesapta 0 sayılan (Mn, Si)
 
 
 class FamilyOut(BaseModel):
     id: str
     base_elements: dict[str, float]
     steel_count: int
+    parent_id: str | None = None
     isopleth_available: bool
     calculated_at: str | None
 

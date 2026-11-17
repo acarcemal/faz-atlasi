@@ -26,3 +26,15 @@ def make_engine(url=None, echo=False):
 
 def make_session(engine):
     return sessionmaker(bind=engine, expire_on_commit=False)()
+
+
+def ensure_schema(engine):
+    """Eski bir veritabanını şemaya getirir: eksik tablolar kurulur, sonradan eklenen sütunlar eklenir
+    (build_db.py'yi yeniden çalıştırmadan; kesitler ve önbellek korunur)."""
+    from sqlalchemy import inspect, text
+    from .models import Base
+    Base.metadata.create_all(engine)
+    sutunlar = {c['name'] for c in inspect(engine).get_columns('alloy_families')}
+    if 'parent_id' not in sutunlar:
+        with engine.begin() as b:
+            b.execute(text('ALTER TABLE alloy_families ADD COLUMN parent_id VARCHAR(128)'))

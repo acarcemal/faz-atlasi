@@ -54,6 +54,8 @@ class AlloyFamily(Base):
     founder_steel_id: Mapped[int | None] = mapped_column(Integer)      # ailenin bileşimini veren çelik
     isopleth_boundaries: Mapped[dict | None] = mapped_column(JsonTip)  # Faz 2: sınır izleme çıktısı
     calculated_at: Mapped[datetime | None] = mapped_column(DateTime)   # hesaplanmadıysa boş
+    # alt aile ise ayrıldığı aile (library/alt_aile.py): üyesi ölçülen sapmayla o aileden çıkmış çelikler
+    parent_id: Mapped[str | None] = mapped_column(String(128))
 
     steels: Mapped[list['Steel']] = relationship(back_populates='family')
 
@@ -121,6 +123,18 @@ class SteelSource(Base):
     steel_id: Mapped[int] = mapped_column(ForeignKey('steels.id', ondelete='CASCADE'), primary_key=True)
     source_id: Mapped[str] = mapped_column(ForeignKey('data_sources.id'), primary_key=True)
     source_ref: Mapped[str] = mapped_column(String(256), primary_key=True)
+
+
+class SteelFamilyFit(Base):
+    """Çeliğin kritik sıcaklıklarının ailesinin kesitindekilerden farkı (calc/sapma.py). Arayüz bununla kesiti
+    çeliğe göre düzeltir; ESIK'i aşan çelikler alt aileye ayrılır."""
+    __tablename__ = 'steel_family_fit'
+    steel_id: Mapped[int] = mapped_column(ForeignKey('steels.id', ondelete='CASCADE'), primary_key=True)
+    family_id: Mapped[str] = mapped_column(String(128))   # ölçümün yapıldığı aile; çelik taşınırsa geçersiz
+    data: Mapped[dict] = mapped_column(JsonTip)           # sapma.olc çıktısı
+    max_abs_delta: Mapped[float] = mapped_column(Float)
+    within: Mapped[bool] = mapped_column(Boolean)
+    checked_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
 class CalculationCache(Base):

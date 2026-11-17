@@ -17,11 +17,11 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, select
 from sqlalchemy.orm import sessionmaker
 
-from ..calc import isil_islem
+from ..calc import isil_islem, sapma
 from ..calc.engine import get_engine
 from ..calc.point import GecersizBilesim, PointService
-from ..db import AlloyFamily, CalculationCache, Steel, make_engine
-from ..library import classify
+from ..db import AlloyFamily, CalculationCache, Steel, SteelFamilyFit, ensure_schema, make_engine
+from ..library import classify, dogrulama
 from ..library.search import search
 from . import schemas
 
@@ -44,7 +44,7 @@ def _kalici_onbellek(Session):
 @asynccontextmanager
 async def lifespan(app):
     db = make_engine()
-    CalculationCache.__table__.create(db, checkfirst=True)
+    ensure_schema(db)
     durum['Session'] = sessionmaker(bind=db, expire_on_commit=False)
     motor = get_engine()
     if os.environ.get('FAZ_WARMUP', '1') != '0':
@@ -106,8 +106,10 @@ def steel(steel_id: int, s=Depends(oturum)):
         composition=[schemas.CompositionOut(element=x.element, min=x.min_val, max=x.max_val, nominal=x.nominal_val)
                      for x in sorted(c.composition, key=lambda x: (x.element != 'C', x.element))],
         alloy_family_id=c.alloy_family_id,
+        family_parent_id=c.family.parent_id if c.family else None,
         isopleth_available=bool(c.family and c.family.isopleth_boundaries),
-        sources=sorted({x.source_id for x in c.sources}))
+        sources=sorted({x.source_id for x in c.sources}),
+        missing_elements=classify.eksik_elementler(c.nominal()))
 
 
 @app.get('/api/v1/families/{family_id}', response_model=schemas.FamilyOut)
@@ -116,7 +118,7 @@ def family(family_id: str, s=Depends(oturum)):
     if not f:
         raise HTTPException(404, 'Aile bulunamadı')
     n = s.scalar(select(func.count()).select_from(Steel).where(Steel.alloy_family_id == family_id))
-    return schemas.FamilyOut(id=f.id, base_elements=f.base_elements, steel_count=n,
+    return schemas.FamilyOut(id=f.id, base_elements=f.base_elements, steel_count=n, parent_id=f.parent_id,
                              isopleth_available=f.isopleth_boundaries is not None,
                              calculated_at=f.calculated_at.isoformat() if f.calculated_at else None)
 
@@ -129,6 +131,42 @@ def isopleth(family_id: str, s=Depends(oturum)):
     if f.isopleth_boundaries is None:
         raise HTTPException(404, 'Bu ailenin kesiti henüz hesaplanmadı (backend/trace_families.py)')
     return f.isopleth_boundaries
+
+
+@app.get('/api/v1/validation')
+def validation():
+    """Ölçümle doğrulama özeti (backend/validate_measured.py): sınıf başına ölçülen Ac − hesaplanan Ae, yavaş ısıtma."""
+    ozet = dogrulama.ozet()
+    if ozet is None:
+        raise HTTPException(404, 'Doğrulama raporu yok (backend/validate_measured.py)')
+    return ozet
+
+
+@app.get('/api/v1/steels/{steel_id}/family-fit')
+def steel_family_fit(steel_id: int, s=Depends(oturum)):
+    """
+    Çeliğin kritik sıcaklıklarının (Ae1, Ae3, karbür/σ çözünme, δ-ferrit) ailesinin kesitindekilerden farkı,
+    çeliğin karbonunda. Arayüz kesitin sıcaklık eksenini bu çiftlere göre düzeltir. `within` = fark eşiğin
+    (threshold, °C) içinde; değilse çelik alt aileye ayrılmayı bekliyor (backend/split_families.py).
+    Ölçülmemişse (tek çelikli aile, yeni çelik) burada ölçülür ve saklanır (~10–30 s).
+    """
+    c = s.get(Steel, steel_id)
+    if not c:
+        raise HTTPException(404, 'Çelik bulunamadı')
+    if not c.family:
+        raise HTTPException(404, 'Çeliğin ailesi yok')
+    fit = s.get(SteelFamilyFit, c.id)
+    if fit is None or fit.family_id != c.alloy_family_id:
+        try:
+            veri = sapma.olc(durum['point'], c.nominal(), c.family.base_elements)
+        except (GecersizBilesim, ValueError) as e:
+            raise HTTPException(422, str(e))
+        fit = s.merge(SteelFamilyFit(steel_id=c.id, family_id=c.alloy_family_id, data=veri,
+                                     max_abs_delta=veri['max_abs_delta'], within=veri['within'],
+                                     checked_at=datetime.utcnow()))
+        s.commit()
+    return {'steel_id': c.id, 'family_id': c.alloy_family_id, 'parent_family_id': c.family.parent_id,
+            **fit.data, 'checked_at': fit.checked_at.isoformat() if fit.checked_at else None}
 
 
 def _rejim(sinif, nom):

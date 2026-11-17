@@ -62,3 +62,9 @@ def group_for(sinif, nom, dokum=False):
     if dokum:
         tr, en = f'{tr} (döküm)', f'{en} (cast)'
     return tr, en
+
+
+def eksik_elementler(nom):
+    """Her çelikte bulunan ama kaynakta verilmemiş (hesapta 0 sayılan) elementler. Açık veri setleri sakinleştirilmiş
+    karbon çeliklerinde Si'yi çoğu zaman vermiyor; Si kritik sıcaklıkları birkaç derece ile ~15 °C arası etkiler."""
+    return [e for e in ('Mn', 'Si') if not nom.get(e)]

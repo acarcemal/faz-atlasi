@@ -25,6 +25,7 @@ TDB (`hesap/tdb/mc_fe_pycalphad.tdb`) depoda yok; ana README'deki adresten indir
 | `GET /api/v1/families/{id}` | Aile bileşimi, üye sayısı, kesit durumu |
 | `GET /api/v1/isopleth/{family_id}` | Kesit: satır bölgeleri (`rows`) ve sınır çizgileri (`lines`) |
 | `GET /api/v1/steels/{id}/heat-treatment` | Sınıfa göre ısıl işlem rejimi (aşağıda) |
+| `GET /api/v1/steels/{id}/family-fit` | Çeliğin kritik sıcaklıklarının ailesinin kesitindekilerden farkı (aşağıda) |
 | `POST /api/v1/heat-treatment` | `{"composition": {...}, "steel_class": null}` → kullanıcı bileşimi için aynı rejim; sınıf verilmezse kestirilir |
 | `POST /api/v1/equilibrium/point` | `{"composition": {"C": 0.42, "Cr": 1.05, ...}, "T": 760}` → faz oranları, fazlardaki karbon, faz bileşimleri |
 
@@ -40,6 +41,29 @@ TDB (`hesap/tdb/mc_fe_pycalphad.tdb`) depoda yok; ana README'deki adresten indir
 
 CALPHAD sıcaklıkları denge değerleridir (Ac/Ar değil): 450–1350 °C arası 50 °C tarama + ±2 °C'ye ikiye bölme.
 Bir çelik ilk sorulduğunda 1–16 s (yeni alaşım sistemi derleniyorsa uzun), sonra önbellekten.
+
+## Alt aileler ve çelik–aile uyumu (`calc/sapma.py`, `library/alt_aile.py`)
+
+Aile kesiti ailenin (kurucu çeliğin) alaşımıyla hesaplanır; bileşim toleransı içindeki farklar aynı yöne
+toplanınca bir çeliğin kritik sıcaklıkları kesittekilerden 15–20 °C ayrışabiliyor. Bu yüzden her çelik ailesine
+karşı CALPHAD ile ölçülür: çeliğin kendi bileşimi ile aile bileşiminde, çeliğin karbonunda Ae1, Ae3, karbür ve σ
+çözünme, δ-ferrit başlangıcı (aynı yöntem, ±2 °C).
+
+* **Fark > 5 °C** (kesitin satır aralığı) ya da bir geçiş birinde var ötekinde yok: çelik ailesinden ayrılır. Önce
+  bileşimce yakın başka bir mevcut aileye, sonra bu turda açılan alt ailelere ölçülür; uymazsa kendi bileşimiyle
+  **alt aile** kurar (`alloy_families.parent_id` = eski aile). Ayrılma nedeni `parent_fit` olarak saklanır.
+* **Fark ≤ 5 °C**: çelik ailede kalır; arayüz kesitin sıcaklık eksenini bu çiftlerle parça parça doğrusal kaydırır
+  (`web/kesit.js: sicaklikEsle`). Çeliğin karbonunda çizgiler çeliğin kendi değerine oturur.
+* Kaynakta Mn/Si verilmemiş çeliklere `missing_elements` ile uyarı gösterilir (hesapta 0 sayılıyorlar).
+
+```bash
+.venv/Scripts/python backend/split_families.py                # ölç -> backend/data/alt_aileler.json (veritabanına yazmaz)
+.venv/Scripts/python backend/split_families.py --uygula       # alt aileleri kur, çelikleri taşı (trace bitince)
+.venv/Scripts/python backend/trace_families.py --eksik --uyarlanir   # yeni alt ailelerin kesitleri
+```
+
+`build_db.py` veritabanını baştan kurarken `alt_aileler.json`'u uygular (aile yapısı ölçümden sonra değiştiyse o kayıtlar
+atlanır ve bildirilir). Ölçülmemiş çelik için `GET /api/v1/steels/{id}/family-fit` ölçüp saklar.
 
 ## Ölçümler (2026-11-02, 12 çekirdekli dizüstü; aynı anda başka bir hesap 4 çekirdek kullanıyordu)
 

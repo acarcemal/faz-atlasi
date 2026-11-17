@@ -19,7 +19,7 @@ import pandas as pd
 
 from ..db.models import (AlloyFamily, Base, DataSource, Steel, SteelComposition, SteelDesignation,
                          SteelSource)
-from . import classify, families
+from . import alt_aile, classify, families
 from .designations import library_aisi, normalize, parse_dataset_name
 from .paslanmaz import PASLANMAZLAR, nominal as pas_nominal
 
@@ -255,7 +255,8 @@ def _hesaplanmis_kesitler(engine, session):
     return {fid: (b, t) for fid, b, t in satirlar}
 
 
-def build(engine, session, esdeger_dosyalari=(), log=print, xlsx=XLSX, gost=GOST_CSV):
+def build(engine, session, esdeger_dosyalari=(), log=print, xlsx=XLSX, gost=GOST_CSV, alt_aileler=alt_aile.KAYIT):
+    """alt_aileler: ölçülen sapmaya göre ayrılmış alt aileler (split_families.py çıktısı); None = uygulanmaz."""
     kesitler = _hesaplanmis_kesitler(engine, session)
     session.close()
     Base.metadata.drop_all(engine)
@@ -272,11 +273,17 @@ def build(engine, session, esdeger_dosyalari=(), log=print, xlsx=XLSX, gost=GOST
     for yol in esdeger_dosyalari:
         k.esdegerler(yol)
     k.aileler()
+    if alt_aileler:
+        tasinan, eklenen, _ = alt_aile.uygula(session, alt_aile.kayit_oku(alt_aileler), log)
+        if eklenen or tasinan:
+            log(f'  alt aileler: {eklenen} alt aile, {tasinan} çelik taşındı ({os.path.basename(alt_aileler)})')
     korunan = 0
     for f in session.query(AlloyFamily).filter(AlloyFamily.id.in_(list(kesitler))):
         f.isopleth_boundaries, f.calculated_at = kesitler[f.id]
         korunan += 1
     if kesitler:
         log(f'  hesaplanmış kesitler: {korunan}/{len(kesitler)} korundu (kalanların ailesi artık yok)')
+    if alt_aileler:
+        alt_aile.bos_aileleri_sil(session)
     session.commit()
     return k
