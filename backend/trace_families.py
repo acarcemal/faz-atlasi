@@ -5,6 +5,9 @@ Alaşım ailelerinin dikey kesitlerini sınır izleme ile hesaplayıp veritaban�
   .venv/Scripts/python backend/trace_families.py --eksik --uyarlanir             # hesaplanmamış tüm aileler
   .venv/Scripts/python backend/trace_families.py --celik 42CrMo4                  # bir çeliğin ailesi
 
+--parca K/N: ailenin kimliğinden (crc32 mod N) seçilen K. parça; iki bilgisayara bölüşmek için, ör. burada
+  --parca 1,2/3, ikinci bilgisayarda --parca 3/3. Parça aileye bağlı olduğu için iki bilgisayar farklı anlarda
+  başlasa da (eksik listesi farklı olsa da) paylar çakışmaz. Sonuçlar merge_isopleths.py ile birleşir.
 --uyarlanir: işlem sayısını boş belleğe göre her aileden önce yeniden seçer ve hesap sürerken belleği izler.
   * İşlem başına bellek, bir önceki ailelerde ölçülen en yüksek değerden öğrenilir (alaşım element sayısına göre).
   * Kullanılabilir bellek --rezerv'in altına inmeyecek kadar işlem açılır (en çok çekirdek − 1).
@@ -17,6 +20,7 @@ import os
 import sys
 import threading
 import time
+import zlib
 from datetime import datetime
 from multiprocessing import get_context
 
@@ -127,6 +131,9 @@ def main():
     p.add_argument('--rezerv', type=float, default=2.5, help='diğer programlara bırakılacak bellek, GB')
     p.add_argument('--kritik', type=float, default=1.0, help='bunun altına inilirse havuzu durdur, GB')
     p.add_argument('--dT', type=float, default=5)
+    p.add_argument('--parca', help='K/N ya da K1,K2/N: sıralı listenin bu parçaları (bilgisayarlar arası bölüşme)')
+    p.add_argument('--ters', action='store_true',
+                   help='listeyi sondan başla (öbür bilgisayar baştan giderken ortada buluşmak için)')
     a = p.parse_args()
 
     s = make_session(make_engine())
@@ -139,20 +146,35 @@ def main():
     if a.eksik:
         hedef += [f.id for f in s.query(AlloyFamily).filter(AlloyFamily.isopleth_boundaries.is_(None))]
     hedef = list(dict.fromkeys(hedef))
+    if a.parca:
+        ks, n = a.parca.split('/')
+        ks, n = {int(k) for k in ks.split(',')}, int(n)
+        # sıradaki yere göre bölmek, listesi farklı anlarda alınan iki bilgisayarda payları kaydırıyordu
+        hedef = [fid for fid in sorted(hedef) if zlib.crc32(fid.encode()) % n + 1 in ks]
+    if a.ters:
+        hedef = sorted(hedef, reverse=True)
     destekli = get_engine().destekli
     en_cok = max(1, (os.cpu_count() or 2) - 1)
     bellek = Bellek(a.rezerv, a.kritik, en_cok) if a.uyarlanir else None
     print(f'{len(hedef)} aile, ' + (f'uyarlanır (en çok {en_cok} işlem, {a.rezerv:g} GB rezerv)' if bellek
                                    else f'{a.islemci} işlem'), flush=True)
 
+    # Windows'ta hesap sürerken bilgisayar boşta uykuya geçmesin (ayar değiştirmez; işlem bitince kendiliğinden kalkar)
+    if sys.platform == 'win32':
+        import ctypes
+        ctypes.windll.kernel32.SetThreadExecutionState(0x80000000 | 0x00000001)   # ES_CONTINUOUS | ES_SYSTEM_REQUIRED
     # işlemler aileden aileye korunur (TDB her ailede yeniden okunmaz); sayı değişince havuz yeniden kurulur
     os.environ.setdefault('FAZ_MODEL_CACHE', '2')
     havuz, n_havuz = None, 0
     try:
         for i, fid in enumerate(hedef, 1):
-            f = s.get(AlloyFamily, fid)
+            f = s.get(AlloyFamily, fid, populate_existing=True)
             if not f:
                 print(f'  aile yok: {fid}')
+                continue
+            if a.eksik and f.isopleth_boundaries is not None:
+                # hesap sürerken başka bir bilgisayarın sonucu birleştirildi (merge_isopleths.py)
+                print(f'[{i}/{len(hedef)}] {fid}: başka yerde hesaplandı, atlandı', flush=True)
                 continue
             bil, C_ref, yok = aile_girdisi(s, f, destekli)
             n_el = len(bil)
